@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GovCoPilot - Autonomous DAO Governance Co-Pilot on X Layer</title>
+  <meta name="description" content="AI-powered governance co-pilot that analyzes proposals, recommends voting strategies, and helps with EVM execution on X Layer.">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            zinc: {
+              950: '#09090b',
+            },
+            xlayer: {
+              blue: '#0052FF',
+              cyan: '#00F0FF',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .code-font {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glow-cyan {
+      box-shadow: 0 0 40px -10px rgba(0, 240, 255, 0.2);
+    }
+    .glow-blue {
+      box-shadow: 0 0 40px -10px rgba(0, 82, 255, 0.25);
+    }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col antialiased selection:bg-xlayer-cyan selection:text-black">
+
+  <!-- Navigation -->
+  <nav class="border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="h-9 w-9 rounded-lg bg-gradient-to-tr from-xlayer-blue to-xlayer-cyan flex items-center justify-center font-bold text-black text-lg tracking-wider">
+          G
+        </div>
+        <div>
+          <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">GovCoPilot</span>
+          <span class="text-xs block text-zinc-500 font-medium -mt-1">by SynArc</span>
+        </div>
+      </div>
+      <div class="hidden md:flex items-center space-x-8 text-sm font-medium text-zinc-400">
+        <a href="#problem" class="hover:text-white transition">Problem</a>
+        <a href="#solution" class="hover:text-white transition">Solution</a>
+        <a href="#playground" class="hover:text-white transition">Playground</a>
+        <a href="#api-docs" class="hover:text-white transition">API Reference</a>
+      </div>
+      <div class="flex items-center space-x-4">
+        <a href="https://github.com/kellycryptos/GovCoPilot" target="_blank" rel="noopener noreferrer" class="p-2 text-zinc-400 hover:text-white transition">
+          <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd"/></svg>
+        </a>
+        <a href="#playground" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-sm font-semibold border border-zinc-700 hover:border-zinc-600 transition shadow-sm">
+          Launch Demo
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="relative pt-24 pb-20 overflow-hidden">
+    <!-- Background Gradients -->
+    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-xlayer-blue/10 rounded-full blur-3xl -z-10"></div>
+    <div class="absolute top-1/3 left-1/3 w-[300px] h-[300px] bg-xlayer-cyan/5 rounded-full blur-3xl -z-10"></div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+      <div class="inline-flex items-center space-x-2 bg-zinc-900 border border-zinc-800 rounded-full py-1.5 px-3 mb-6 text-xs text-zinc-400">
+        <span class="flex h-2.5 w-2.5 relative">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-xlayer-cyan opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-xlayer-cyan"></span>
+        </span>
+        <span>Built for OKX AI Genesis Hackathon</span>
+      </div>
+      
+      <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto mb-6 bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent leading-none">
+        Autonomous DAO Governance Co-Pilot on X Layer
+      </h1>
+      
+      <p class="text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto mb-10">
+        GovCoPilot analyzes complex proposals, recommends voting strategies with confidence scores, and generates EVM-compatible execution calldata automatically.
+      </p>
+      
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+        <a href="#playground" class="w-full sm:w-auto bg-gradient-to-r from-xlayer-blue to-xlayer-cyan text-black font-semibold px-8 py-3.5 rounded-lg hover:opacity-90 transition shadow-lg shadow-xlayer-blue/10">
+          Try API Playground
+        </a>
+        <a href="https://github.com/kellycryptos/GovCoPilot" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white px-8 py-3.5 rounded-lg font-semibold border border-zinc-800 transition">
+          View GitHub Repository
+        </a>
+      </div>
+
+      <!-- Feature Badges -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-6 border-t border-zinc-800/60">
+        <div class="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/40 backdrop-blur-sm">
+          <div class="text-xlayer-cyan font-bold text-lg mb-1">99.8%</div>
+          <div class="text-xs text-zinc-500 font-medium">Uptime Guarantee</div>
+        </div>
+        <div class="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/40 backdrop-blur-sm">
+          <div class="text-xlayer-cyan font-bold text-lg mb-1">&lt; 0.05 OKB</div>
+          <div class="text-xs text-zinc-500 font-medium">Fixed Cost per Call</div>
+        </div>
+        <div class="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/40 backdrop-blur-sm">
+          <div class="text-xlayer-cyan font-bold text-lg mb-1">X Layer Native</div>
+          <div class="text-xs text-zinc-500 font-medium">EVM Optimized</div>
+        </div>
+        <div class="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/40 backdrop-blur-sm">
+          <div class="text-xlayer-cyan font-bold text-lg mb-1">x402 Protocol</div>
+          <div class="text-xs text-zinc-500 font-medium">Agent-to-Agent Payments</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem Section -->
+  <section id="problem" class="py-20 border-t border-zinc-900 bg-zinc-950/50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-xs font-bold text-xlayer-cyan uppercase tracking-widest mb-3">The Challenge</h2>
+        <h3 class="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-4">
+          DAO Governance is Broken for Agents & Humans
+        </h3>
+        <p class="text-zinc-400">
+          With thousands of active proposals, tracking treasury impact, analyzing smart contract upgrades, and optimizing gas on EVM chains is complex, slow, and expensive.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="p-6 rounded-2xl bg-zinc-900/30 border border-zinc-900 flex flex-col justify-between">
+          <div>
+            <div class="h-10 w-10 rounded-lg bg-zinc-800 flex items-center justify-center text-red-400 mb-6 font-bold">!</div>
+            <h4 class="text-lg font-semibold text-white mb-2">Governance Fatigue</h4>
+            <p class="text-zinc-400 text-sm">
+              Participating in multiple DAOs requires reviewing hundreds of pages of documentation daily, resulting in low turnout and unvetted decisions.
+            </p>
+          </div>
+        </div>
+        <div class="p-6 rounded-2xl bg-zinc-900/30 border border-zinc-900 flex flex-col justify-between">
+          <div>
+            <div class="h-10 w-10 rounded-lg bg-zinc-800 flex items-center justify-center text-red-400 mb-6 font-bold">$</div>
+            <h4 class="text-lg font-semibold text-white mb-2">Treasury Security Risks</h4>
+            <p class="text-zinc-400 text-sm">
+              Malicious proposals can drain millions of dollars from treasuries via obfuscated router updates or smart contract upgrades.
+            </p>
+          </div>
+        </div>
+        <div class="p-6 rounded-2xl bg-zinc-900/30 border border-zinc-900 flex flex-col justify-between">
+          <div>
+            <div class="h-10 w-10 rounded-lg bg-zinc-800 flex items-center justify-center text-red-400 mb-6 font-bold">&gt;_</div>
+            <h4 class="text-lg font-semibold text-white mb-2">Non-Agent Friendly</h4>
+            <p class="text-zinc-400 text-sm">
+              AI agents lack standardized tools to quickly analyze context and auto-generate transaction calldata to vote or execute.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Solution Section -->
+  <section id="solution" class="py-20 border-t border-zinc-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-xs font-bold text-xlayer-cyan uppercase tracking-widest mb-3">The Solution</h2>
+        <h3 class="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-4">
+          One API Call to Analyze, Decide, and Execute
+        </h3>
+        <p class="text-zinc-400">
+          GovCoPilot exposes a single endpoint gated by x402 payment headers that provides structured governance insights and executable payloads.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div class="space-y-6">
+          <div class="flex items-start space-x-4">
+            <div class="h-8 w-8 rounded bg-xlayer-blue/20 text-xlayer-cyan flex items-center justify-center font-bold text-sm shrink-0 mt-1">1</div>
+            <div>
+              <h4 class="text-lg font-semibold text-white mb-1">Deep Strategic Analysis</h4>
+              <p class="text-zinc-400 text-sm">
+                Evaluates proposal alignment with the DAO's stated objectives, current treasury snapshot, and security risks.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-start space-x-4">
+            <div class="h-8 w-8 rounded bg-xlayer-blue/20 text-xlayer-cyan flex items-center justify-center font-bold text-sm shrink-0 mt-1">2</div>
+            <div>
+              <h4 class="text-lg font-semibold text-white mb-1">Reasoned Voting Recommendations</h4>
+              <p class="text-zinc-400 text-sm">
+                Generates a recommended vote (YES, NO, ABSTAIN) backed by granular reasoning and a confidence percentage.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-start space-x-4">
+            <div class="h-8 w-8 rounded bg-xlayer-blue/20 text-xlayer-cyan flex items-center justify-center font-bold text-sm shrink-0 mt-1">3</div>
+            <div>
+              <h4 class="text-lg font-semibold text-white mb-1">Actionable EVM / X Layer Execution</h4>
+              <p class="text-zinc-400 text-sm">
+                Outputs transaction steps and EVM calldata templates so AI agents can vote and execute onchain autonomously.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-6 glow-cyan">
+          <div class="flex items-center justify-between pb-4 border-b border-zinc-800 mb-4">
+            <span class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Example Response Structure</span>
+            <div class="flex space-x-1.5">
+              <span class="h-2.5 w-2.5 rounded-full bg-zinc-800"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-zinc-800"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-zinc-800"></span>
+            </div>
+          </div>
+          <pre class="text-xs code-font text-zinc-400 overflow-x-auto">
+{
+  <span class="text-xlayer-cyan">"proposalSummary"</span>: "Upgrades Governor router to V2 on X Layer...",
+  <span class="text-xlayer-cyan">"analysis"</span>: {
+    "strategicAlignment": "High alignment. Improves gas efficiency...",
+    "securityRisks": "No immediate smart contract risks identified..."
+  },
+  <span class="text-xlayer-cyan">"votingRecommendation"</span>: {
+    "vote": <span class="text-green-400">"YES"</span>,
+    "confidence": 0.94,
+    "reasoning": "Saves 15% transaction fees and boosts router stability."
+  },
+  <span class="text-xlayer-cyan">"executionGuidance"</span>: {
+    "steps": [
+      "Submit vote transaction to X Layer Governor at contract 0xabc..."
+    ],
+    "xLayerOptimizations": "Verify transaction has finality on block height > 50000.",
+    "calldataHint": "cast send 0xabc... 'castVote(uint256,uint8)' 42 1"
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Playground / Live Playground Section -->
+  <section id="playground" class="py-20 border-t border-zinc-900 bg-zinc-950/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-xs font-bold text-xlayer-cyan uppercase tracking-widest mb-3">Playground</h2>
+        <h3 class="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-4">
+          Test GovCoPilot Live
+        </h3>
+        <p class="text-zinc-400">
+          Submit a proposal below to test our analysis engine. In this playground, payment requirements are set to simulation/bypass mode.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <!-- Input Form -->
+        <div class="lg:col-span-5 bg-zinc-900 border border-zinc-850 p-6 rounded-2xl space-y-6">
+          <div>
+            <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Proposal Title</label>
+            <input id="proposal-title" type="text" value="PIP-102: Migrate GoalHook Router to X Layer" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:border-xlayer-cyan outline-none transition text-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Blockchain</label>
+            <select id="proposal-chain" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:border-xlayer-cyan outline-none transition text-white">
+              <option value="x-layer" selected>X Layer</option>
+              <option value="ethereum">Ethereum</option>
+              <option value="arbitrum">Arbitrum</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Proposal Text</label>
+            <textarea id="proposal-text" rows="8" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:border-xlayer-cyan outline-none transition text-white code-font">This proposal seeks to migrate the primary GoalHook liquidity router to X Layer. The migration aims to lower swap costs for GoalHook end-users by 90% and leverage X Layer's fast EVM block finality.
+
+Steps:
+1. Deprecate the router contract on mainnet.
+2. Initialize and deploy RouterV2 on X Layer at address 0x9923...
+3. Deposit 5,000 USDC from the treasury for boot liquidity.</textarea>
+          </div>
+          <button id="btn-analyze" class="w-full bg-gradient-to-r from-xlayer-blue to-xlayer-cyan text-black font-bold py-3 rounded-lg hover:opacity-90 transition flex items-center justify-center space-x-2 text-sm">
+            <span>Analyze Proposal</span>
+            <span id="spinner" class="hidden h-4 w-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+          </button>
+        </div>
+
+        <!-- Output Terminal -->
+        <div class="lg:col-span-7 flex flex-col h-[520px] bg-zinc-950 border border-zinc-850 rounded-2xl overflow-hidden glow-blue">
+          <div class="bg-zinc-900 border-b border-zinc-850 px-4 py-3 flex items-center justify-between">
+            <span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Analysis Terminal Output</span>
+            <div class="flex space-x-2">
+              <span class="h-2 w-2 rounded-full bg-red-500/40"></span>
+              <span class="h-2 w-2 rounded-full bg-yellow-500/40"></span>
+              <span class="h-2 w-2 rounded-full bg-green-500/40"></span>
+            </div>
+          </div>
+          <div class="p-6 flex-1 overflow-y-auto code-font text-xs text-zinc-400 space-y-4" id="terminal-content">
+            <span class="text-zinc-600">// Ready to analyze. Click "Analyze Proposal" to run.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- API Reference Section -->
+  <section id="api-docs" class="py-20 border-t border-zinc-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-xs font-bold text-xlayer-cyan uppercase tracking-widest mb-3">API Reference</h2>
+        <h3 class="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-4">
+          Integrating GovCoPilot
+        </h3>
+        <p class="text-zinc-400">
+          Make a single POST request. Secure payment checks are handled automatically by the x402 middleware.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div class="lg:col-span-5 space-y-6">
+          <div class="bg-zinc-900 border border-zinc-850 p-6 rounded-2xl">
+            <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Request Details</h4>
+            <div class="space-y-3 text-sm">
+              <div class="flex justify-between border-b border-zinc-800 pb-2">
+                <span class="text-zinc-400">Method</span>
+                <span class="font-bold text-xlayer-cyan code-font">POST</span>
+              </div>
+              <div class="flex justify-between border-b border-zinc-800 pb-2">
+                <span class="text-zinc-400">Endpoint</span>
+                <span class="font-medium text-white code-font">/api/analyze_governance_proposal</span>
+              </div>
+              <div class="flex justify-between border-b border-zinc-800 pb-2">
+                <span class="text-zinc-400">Header required</span>
+                <span class="font-medium text-white code-font text-xs">X-Payment-Tx-Hash</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-zinc-900 border border-zinc-850 p-6 rounded-2xl">
+            <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-4">x402 Flow</h4>
+            <ol class="list-decimal list-inside text-sm text-zinc-400 space-y-2">
+              <li>Call `/api/analyze_governance_proposal` without the tx hash header.</li>
+              <li>Receive `402 Payment Required` + payment wallet metadata headers.</li>
+              <li>Broadcast payment on X Layer (native token/USDC).</li>
+              <li>Retry request including the tx hash in the `X-Payment-Tx-Hash` header.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 bg-zinc-900 border border-zinc-850 rounded-2xl overflow-hidden">
+          <div class="bg-zinc-950 border-b border-zinc-850 px-4 py-3 flex items-center justify-between">
+            <span class="text-xs font-semibold text-zinc-400 code-font">cURL Example</span>
+            <button class="text-xs text-zinc-500 hover:text-white transition">Copy</button>
+          </div>
+          <div class="p-6">
+            <pre class="text-xs code-font text-zinc-400 overflow-x-auto leading-relaxed">
+<span class="text-zinc-600"># 1. Probe the endpoint to get payment coordinates</span>
+curl -i -X POST http://localhost:3000/api/analyze_governance_proposal \
+  -H "Content-Type: application/json" \
+  -d '{"proposalText": "Upgrade main governance contract"}'
+
+<span class="text-zinc-600"># Response will include headers:
+# X-Payment-Address: 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
+# X-Payment-Amount: 0.05
+# X-Payment-Chain-Id: 195</span>
+
+<span class="text-zinc-600"># 2. Re-send once you submit the tx onchain with the Tx Hash</span>
+curl -X POST http://localhost:3000/api/analyze_governance_proposal \
+  -H "Content-Type: application/json" \
+  -H "X-Payment-Tx-Hash: 0x8ef439b1e...your_tx_hash..." \
+  -d '{"proposalText": "Upgrade main governance contract", "chain": "x-layer"}'</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-zinc-900 bg-zinc-950 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="text-sm text-zinc-500">
+        &copy; 2026 GovCoPilot. Designed for the OKX AI Genesis Hackathon.
+      </div>
+      <div class="flex items-center space-x-6 text-sm text-zinc-500">
+        <a href="https://github.com/kellycryptos/GovCoPilot" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">GitHub</a>
+        <a href="https://x.com/XLayerOfficial" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">X Layer</a>
+        <a href="https://okx.ai" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">okx.ai</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Playground Script -->
+  <script>
+    const btnAnalyze = document.getElementById('btn-analyze');
+    const spinner = document.getElementById('spinner');
+    const termContent = document.getElementById('terminal-content');
+
+    btnAnalyze.addEventListener('click', async () => {
+      const title = document.getElementById('proposal-title').value;
+      const chain = document.getElementById('proposal-chain').value;
+      const text = document.getElementById('proposal-text').value;
+
+      if (!text) {
+        alert('Please fill out the proposal text.');
+        return;
+      }
+
+      // UI loading state
+      btnAnalyze.disabled = true;
+      spinner.classList.remove('hidden');
+      termContent.innerHTML = `<span class="text-xlayer-cyan animate-pulse">&gt; Dispatching request to GovCoPilot API...</span><br><span class="text-zinc-500">&gt; Method: POST /api/analyze_governance_proposal</span><br><span class="text-zinc-500">&gt; Bypass: enabled</span>`;
+
+      try {
+        const response = await fetch('/api/analyze_governance_proposal', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            proposalTitle: title,
+            chain: chain,
+            proposalText: text
+          })
+        });
+
+        const data = await response.json();
+        spinner.classList.add('hidden');
+        btnAnalyze.disabled = false;
+
+        if (response.status === 200) {
+          termContent.innerHTML = `<span class="text-green-500">&gt; Response status: 200 OK</span><br><pre class="text-zinc-300 overflow-x-auto mt-2">${JSON.stringify(data, null, 2)}</pre>`;
+        } else if (response.status === 402) {
+          termContent.innerHTML = `<span class="text-yellow-500">&gt; Response status: 402 Payment Required</span><br><pre class="text-zinc-300 overflow-x-auto mt-2">${JSON.stringify(data, null, 2)}</pre>`;
+        } else {
+          termContent.innerHTML = `<span class="text-red-500">&gt; Response status: ${response.status}</span><br><pre class="text-red-400 overflow-x-auto mt-2">${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      } catch (error) {
+        spinner.classList.add('hidden');
+        btnAnalyze.disabled = false;
+        termContent.innerHTML = `<span class="text-red-500">&gt; Connection Error: ${error.message}</span><br><span class="text-zinc-500">Ensure the backend server is running and accessible.</span>`;
+      }
+    });
+  </script>
+</body>
+</html>
