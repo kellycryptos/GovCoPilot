@@ -1,4 +1,4 @@
-import app from './index.js';
+import app from '../api/index.js';
 import { AddressInfo } from 'net';
 
 // Helper to start the server on a random port
