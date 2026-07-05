@@ -3,8 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const apiKey = process.env.GROQ_API_KEY;
-const groq = new Groq({ apiKey });
+
 
 export interface ProposalInput {
   proposalText: string;
@@ -35,9 +34,12 @@ export interface ProposalAnalysisResult {
 }
 
 export async function analyzeProposal(input: ProposalInput): Promise<ProposalAnalysisResult> {
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     throw new Error('GROQ_API_KEY is not defined in environment variables.');
   }
+
+  const groq = new Groq({ apiKey });
 
   const model = process.env.GROQ_MODEL || 'llama-3.3-70b-specdec';
 
