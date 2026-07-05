@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { analyzeProposal } from './services/analyzer.js';
-import { x402Middleware } from './middleware/x402.js';
+import { analyzeProposal } from '../src/services/analyzer.js';
+import { x402Middleware } from '../src/middleware/x402.js';
 
 dotenv.config();
 
@@ -51,7 +51,8 @@ app.listen(PORT, () => {
   console.log(`==================================================`);
   console.log(` GovCoPilot ASP Server running on port ${PORT}`);
   console.log(` - Health check: http://localhost:${PORT}/health`);
-  console.log(` - Analyze API:  http://localhost:${PORT}/api/analyze (x402 gated)`);
+  console.log(` - Analyze API:  http://localhost:${PORT}/api/analyze_governance_proposal (x402 gated)`);
   console.log(`==================================================`);
 });
+
 export default app;
