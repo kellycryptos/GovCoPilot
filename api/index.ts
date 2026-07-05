@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 import { analyzeProposal } from '../src/services/analyzer.js';
 import { x402Middleware } from '../src/middleware/x402.js';
 
@@ -12,6 +14,16 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Explicitly serve landing page at root route
+app.get('/', (req, res) => {
+  const filePath = path.join(process.cwd(), 'index.html');
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send('Landing page index.html not found.');
+  }
+});
 
 // Public health check endpoint
 app.get('/health', (req, res) => {
