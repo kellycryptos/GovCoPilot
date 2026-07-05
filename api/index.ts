@@ -46,13 +46,14 @@ app.post(['/api/analyze', '/api/analyze_governance_proposal'], x402Middleware, a
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`==================================================`);
-  console.log(` GovCoPilot ASP Server running on port ${PORT}`);
-  console.log(` - Health check: http://localhost:${PORT}/health`);
-  console.log(` - Analyze API:  http://localhost:${PORT}/api/analyze_governance_proposal (x402 gated)`);
-  console.log(`==================================================`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`==================================================`);
+    console.log(` GovCoPilot ASP Server running on port ${PORT}`);
+    console.log(` - Health check: http://localhost:${PORT}/health`);
+    console.log(` - Analyze API:  http://localhost:${PORT}/api/analyze_governance_proposal (x402 gated)`);
+    console.log(`==================================================`);
+  });
+}
 
 export default app;
