@@ -466,7 +466,8 @@ curl -X POST http://localhost:3000/api/analyze_governance_proposal \
         const response = await fetch('/api/analyze_governance_proposal', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Playground-Request': 'true'
           },
           body: JSON.stringify({
             proposalTitle: title,

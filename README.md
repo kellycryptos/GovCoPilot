@@ -13,7 +13,7 @@
 ## Tech Stack
 - **Runtime & Language**: Node.js & TypeScript
 - **Server Framework**: Express.js
-- **LLM Engine**: Groq API (`llama-3.3-70b-specdec` / Qwen models)
+- **LLM Engine**: Groq API (`llama-3.3-70b-versatile` / Qwen models)
 - **Onchain Queries**: Ethers.js (X Layer Testnet/Mainnet RPC)
 - **Frontend**: Clean, premium dark-themed landing page with Tailwind CSS and an interactive live playground.
 
