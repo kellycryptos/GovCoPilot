@@ -41,7 +41,7 @@ export async function analyzeProposal(input: ProposalInput): Promise<ProposalAna
 
   const groq = new Groq({ apiKey });
 
-  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  const model = process.env.GROQ_MODEL || 'qwen/qwen3.6-27b';
 
   const systemPrompt = `You are GovCoPilot, an expert AI agent specializing in DAO governance, risk assessment, and onchain execution. Your job is to analyze governance proposals and recommend voting strategies with high precision.
 
