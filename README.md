@@ -2,9 +2,9 @@
 
 **Autonomous DAO Governance Co-Pilot, built on X Layer**
 
-GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns a structured, machine-readable recommendation — strategic alignment, security risk assessment, a confidence-scored vote recommendation, and ready-to-execute EVM calldata — all via a single x402-paid API call.
+GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns a structured, machine-readable recommendation ,strategic alignment, security risk assessment, a confidence-scored vote recommendation, and ready-to-execute EVM calldata ,all via a single x402-paid API call.
 
-Built for the agent-to-agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's endpoint, pays per-call in testnet OKB/USDC via x402, and receives back everything it needs to make and execute a governance decision autonomously — no negotiation, no human in the loop.
+Built for the agent-to-agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's endpoint, pays per-call in testnet OKB/USDC via x402, and receives back everything it needs to make and execute a governance decision autonomously ,no negotiation, no human in the loop.
 
 GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platform with 900+ real proposals on Arc Testnet, and is optimized for X Layer's fast finality and low fees, with native OKX Agentic Wallet integration for programmatic per-call payments.
 
