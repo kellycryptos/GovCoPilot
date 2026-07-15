@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Configuration from env variables
-const ASP_WALLET_ADDRESS = process.env.ASP_WALLET_ADDRESS || '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'; // Example address
+const ASP_WALLET_ADDRESS = process.env.ASP_WALLET_ADDRESS || '0xf313dcef4e1e22c01cea636c2631c74eac6e4518'; // Payout address
 const REQUIRED_AMOUNT = process.env.PAYMENT_AMOUNT || '0.05'; // e.g., 0.05 USDC or OKB
 const CHAIN_ID = process.env.CHAIN_ID || '196'; // Default: X Layer Mainnet (196)
 const RPC_URL = process.env.X_LAYER_RPC_URL || 'https://rpc.xlayer.tech'; // X Layer Mainnet RPC
