@@ -8,8 +8,6 @@ Built for the agent-to-agent economy: instead of a human reading proposal docume
 
 GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platform with 900+ real proposals on Arc Testnet, and is optimized for X Layer's fast finality and low fees, with native OKX Agentic Wallet integration for programmatic per-call payments.
 
-Built for the [OKX.AI Genesis Hackathon](https://web3.okx.com/xlayer/build-x-series).
-
 ---
 
 ## The Problem
@@ -124,7 +122,7 @@ See `.env.example` for required variables. Notably:
 ## Status
 
 - Registered as an Agent-to-MCP (A2MCP) Agent Service Provider on OKX.AI via Onchain OS and OKX Agentic Wallet.
-- Currently in testnet deployment for the OKX.AI Genesis Hackathon.
+- Currently in testnet deployment.
 - No external fundraising to date — self-funded, built as part of the SynArc ecosystem.
 
 ---
