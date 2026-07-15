@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "okx-agent-payments-protocol": {
+      "source": "okx/onchainos-skills",
+      "sourceType": "github",
+      "skillPath": "skills/okx-agent-payments-protocol/SKILL.md",
+      "computedHash": "ef9c40aaee291a9023d266725f092d132bad8176205c01b6f659216541b11641"
+    },
+    "okx-agentic-wallet": {
+      "source": "okx/onchainos-skills",
+      "sourceType": "github",
+      "skillPath": "skills/okx-agentic-wallet/SKILL.md",
+      "computedHash": "af04fc6b89b3ac07306a1d614278586ff540a68c7f68a945540ef3c21a127cb1"
+    },
+    "okx-ai": {
+      "source": "okx/onchainos-skills",
+      "sourceType": "github",
+      "skillPath": "skills/okx-ai/SKILL.md",
+      "computedHash": "45a83794a685cd206745be4c7294d66a1896e30131bc26cec68bbe4bf0cf63a2"
+    },
+    "okx-dapp-discovery": {
+      "source": "okx/onchainos-skills",
+      "sourceType": "github",
+      "skillPath": "skills/okx-dapp-discovery/SKILL.md",
+      "computedHash": "600d896b8731a4d4838f0dda8a035d178791757672cc49030d219b2d3e3cabf8"
+    },
+    "okx-defi": {
+      "source": "okx/onchainos-skills",
+      "sourceType": "github",
+      "skillPath": "skills/okx-defi/SKILL.md",
+      "computedHash": "2988e2d59af0bf930c2592cf77e3d6995f9f28b24a4e148f54530d1fba41fae6"
+    },
+    "okx-dex-market": {
+      "source": "okx/onchainos-skills",
+      "sourceType": "github",
+      "skillPath": "skills/okx-dex-market/SKILL.md",
+      "computedHash": "b084a85b0c488d1ff35776826ca1db631a7ae7759e3b2f0273d51d7f6f19265d"
+    },
+    "okx-growth-competition": {
+      "source": "okx/onchainos-skills",
+      "sourceType": "github",
+      "skillPath": "skills/okx-growth-competition/SKILL.md",
+      "computedHash": "97a280e508c3c42f01f4e844b55e815a96c7369f7a7f9d442e16c0acb6d4c03c"
+    },
+    "okx-guide": {
+      "source": "okx/onchainos-skills",
+      "sourceType": "github",
+      "skillPath": "skills/okx-guide/SKILL.md",
+      "computedHash": "91a9c4c4eee7ef046e38039bf3a049161f2087e9848edee7856ced60ed5c8491"
+    }
+  }
+}

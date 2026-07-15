@@ -17,7 +17,7 @@ app.use(express.static('public'));
 
 // Explicitly serve landing page at root route
 app.get('/', (req, res) => {
-  const filePath = path.join(process.cwd(), 'index.html');
+  const filePath = path.join(process.cwd(), 'public', 'index.html');
   if (fs.existsSync(filePath)) {
     res.sendFile(filePath);
   } else {
