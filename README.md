@@ -1,73 +1,134 @@
-# GovCoPilot 🤖🏛️
+# GovCoPilot
 
-**GovCoPilot** (by SynArc) is an AI-powered governance co-pilot ASP (Agentic Service Provider) designed for the **OKX AI Genesis Hackathon**. It analyzes DAO proposals, recommends voting strategies with confidence scores, and generates EVM-compatible execution calldata—optimized natively for the **X Layer** ecosystem.
+**Autonomous DAO Governance Co-Pilot, built on X Layer**
 
-## Core Features
-1. **Strategic & Risk Analysis**: Deep analysis covering strategic alignment, financial/treasury implications, and security risks.
-2. **Voting Recommendation**: Clear, action-oriented recommendations (`YES`, `NO`, `ABSTAIN`) with a detailed rationale and confidence score.
-3. **EVM / X Layer Execution Guidance**: Provides step-by-step guidance and transaction calldata templates for immediate execution.
-4. **x402 Payment Gateway**: Integrated Agent-to-Agent monetization flow using the `402 Payment Required` standard.
+GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns a structured, machine-readable recommendation — strategic alignment, security risk assessment, a confidence-scored vote recommendation, and ready-to-execute EVM calldata — all via a single x402-paid API call.
 
----
+Built for the agent-to-agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's endpoint, pays per-call in testnet OKB/USDC via x402, and receives back everything it needs to make and execute a governance decision autonomously — no negotiation, no human in the loop.
 
-## Tech Stack
-- **Runtime & Language**: Node.js & TypeScript
-- **Server Framework**: Express.js
-- **LLM Engine**: Groq API (`llama-3.3-70b-versatile` / Qwen models)
-- **Onchain Queries**: Ethers.js (X Layer Testnet/Mainnet RPC)
-- **Frontend**: Clean, premium dark-themed landing page with Tailwind CSS and an interactive live playground.
+GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platform with 900+ real proposals on Arc Testnet, and is optimized for X Layer's fast finality and low fees, with native OKX Agentic Wallet integration for programmatic per-call payments.
+
+Built for the [OKX.AI Genesis Hackathon](https://web3.okx.com/xlayer/build-x-series).
 
 ---
 
-## Getting Started
+## The Problem
 
-### 1. Installation
-Clone the repository and install dependencies:
+DAO governance today is broken for both humans and agents:
+
+- **Governance fatigue** — reviewing hundreds of pages of proposal documentation per vote leads to low turnout and unvetted decisions.
+- **Treasury security risk** — malicious proposals can drain funds via obfuscated router updates or contract upgrades.
+- **No agent-native tooling** — AI agents have no standardized way to analyze a proposal and generate an executable transaction.
+
+GovCoPilot gives any agent a single, paid, standardized endpoint to solve both.
+
+---
+
+## Live Demo
+
+- **Playground:** https://gov-copilot.vercel.app/#playground (payment bypassed for testing — see below)
+- **GitHub:** https://github.com/kellycryptos/GovCoPilot
+
+---
+
+## Network & Deployment Details
+
+| Field | Value |
+|---|---|
+| Network | X Layer **Testnet** |
+| Chain ID | `195` |
+| RPC URL | `https://xlayertestrpc.okx.com` |
+| Payment Address (ASP wallet) | `0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b` |
+| Payment amount per call | 0.05 (native token/USDC, testnet) |
+| Smart contract | None — payment is a direct EOA-to-EOA transfer, verified onchain by tx hash |
+
+> This is a testnet deployment. No real funds are used or at risk. The payment address above is a wallet controlled by the project maintainer for testnet demo purposes only.
+
+---
+
+## API Reference
+
+**Endpoint:** `POST /api/analyze_governance_proposal`
+
+**Required header (after payment):** `X-Payment-Tx-Hash`
+
+### x402 Flow
+
+1. Call the endpoint without a tx hash header.
+2. Receive `402 Payment Required` with payment coordinates in the response headers/body.
+3. Broadcast payment on X Layer Testnet (native token/USDC) to the address above.
+4. Retry the request including the transaction hash in the `X-Payment-Tx-Hash` header.
+
+### cURL Example
+
 ```bash
-npm install
+# 1. Probe the endpoint to get payment coordinates
+curl -i -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
+  -H "Content-Type: application/json" \
+  -d '{"proposalText": "Upgrade main governance contract"}'
+
+# Response includes headers:
+# X-Payment-Address: 0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b
+# X-Payment-Amount: 0.05
+# X-Payment-Chain-Id: 195
+
+# 2. Re-send once you submit the tx onchain with the Tx Hash
+curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
+  -H "Content-Type: application/json" \
+  -H "X-Payment-Tx-Hash: 0xYOUR_TX_HASH" \
+  -d '{"proposalText": "Upgrade main governance contract", "chain": "x-layer"}'
 ```
 
-### 2. Configuration
-Create a `.env` file in the root directory:
-```bash
-cp .env.example .env
-```
-Fill in the configuration details:
-- `GROQ_API_KEY`: Your Groq API key for proposal analysis.
-- `ASP_WALLET_ADDRESS`: Your EVM wallet address to receive x402 payments.
-- `BYPASS_PAYMENT_VERIFICATION`: Set to `true` to test proposal analysis without executing real onchain payments.
+### Example Response
 
-### 3. Run Locally
-Run the server in development mode:
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser to view the landing page and use the live API playground.
-
-### 4. Integration Verification
-You can run the integration tests to verify the x402 headers and health check endpoints:
-```bash
-npx tsx src/test-client.ts
+```json
+{
+  "proposalSummary": "Upgrades Governor router to V2 on X Layer...",
+  "analysis": {
+    "strategicAlignment": "High alignment. Improves gas efficiency...",
+    "financialImpact": "...",
+    "securityRisks": "No immediate smart contract risks identified...",
+    "opportunities": "..."
+  },
+  "votingRecommendation": {
+    "vote": "YES",
+    "confidence": 0.94,
+    "reasoning": "Saves 15% transaction fees and boosts router stability."
+  },
+  "executionGuidance": {
+    "steps": ["Submit vote transaction to X Layer Governor at contract 0xabc..."],
+    "xLayerOptimizations": "Verify transaction has finality on block height > 50000.",
+    "calldataHint": "cast send 0xabc... 'castVote(uint256,uint8)' 42 1"
+  }
+}
 ```
 
 ---
 
-## x402 Payment Protocol Flow
-GovCoPilot monetizes API calls programmatically:
+## Playground (Testing Without Payment)
 
-1. **Client Probe**: The client calls `/api/analyze` without headers.
-2. **Payment Request**: The server responds with `402 Payment Required` and headers detailing the recipient and fee:
-   - `X-Payment-Address`: ASP wallet address.
-   - `X-Payment-Amount`: e.g. `0.05` OKB/USDC.
-   - `X-Payment-Chain-Id`: e.g. `196` (X Layer Mainnet).
-3. **Execution**: The client signs and broadcasts the transfer transaction onchain.
-4. **Final Request**: The client retries the API call, placing the transaction hash in the `X-Payment-Tx-Hash` header. The server verifies the transaction onchain, checks for double-spending, and fulfills the request.
+The live playground bypasses payment for judges/testers via an internal `X-Playground-Request` header — no on-chain transaction required to try the analysis engine. Real agent-to-agent calls outside the playground still require the full x402 payment flow described above.
 
 ---
 
-## Deployment
-This project is pre-configured for instant serverless deployment on **Vercel**:
-```bash
-vercel
-```
-Ensure your environment variables are configured in the Vercel dashboard.
+## Environment Variables
+
+See `.env.example` for required variables. Notably:
+
+- `ASP_WALLET_ADDRESS` — the testnet wallet receiving x402 payments
+- `CHAIN_ID` — `195` (X Layer Testnet)
+- `GROQ_API_KEY` — server-side only, never exposed to the client
+
+---
+
+## Status
+
+- Registered as an Agent-to-MCP (A2MCP) Agent Service Provider on OKX.AI via Onchain OS and OKX Agentic Wallet.
+- Currently in testnet deployment for the OKX.AI Genesis Hackathon.
+- No external fundraising to date — self-funded, built as part of the SynArc ecosystem.
+
+---
+
+## License
+
+MIT
