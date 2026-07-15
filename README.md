@@ -59,7 +59,7 @@ GovCoPilot monetizes API calls programmatically:
 2. **Payment Request**: The server responds with `402 Payment Required` and headers detailing the recipient and fee:
    - `X-Payment-Address`: ASP wallet address.
    - `X-Payment-Amount`: e.g. `0.05` OKB/USDC.
-   - `X-Payment-Chain-Id`: e.g. `195` (X Layer Testnet).
+   - `X-Payment-Chain-Id`: e.g. `196` (X Layer Mainnet).
 3. **Execution**: The client signs and broadcasts the transfer transaction onchain.
 4. **Final Request**: The client retries the API call, placing the transaction hash in the `X-Payment-Tx-Hash` header. The server verifies the transaction onchain, checks for double-spending, and fulfills the request.
 

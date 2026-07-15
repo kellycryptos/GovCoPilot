@@ -408,17 +408,17 @@ Steps:
           <div class="p-6">
             <pre class="text-xs code-font text-zinc-400 overflow-x-auto leading-relaxed">
 # 1. Probe the endpoint to get payment coordinates
-curl -i -X POST http://localhost:3000/api/analyze_governance_proposal \
+curl -i -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
   -H "Content-Type: application/json" \
   -d '{"proposalText": "Upgrade main governance contract"}'
 
 # Response will include headers:
 # X-Payment-Address: 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
 # X-Payment-Amount: 0.05
-# X-Payment-Chain-Id: 195
+# X-Payment-Chain-Id: 196
 
 # 2. Re-send once you submit the tx onchain with the Tx Hash
-curl -X POST http://localhost:3000/api/analyze_governance_proposal \
+curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
   -H "Content-Type: application/json" \
   -H "X-Payment-Tx-Hash: 0x8ef439b1e...your_tx_hash..." \
   -d '{"proposalText": "Upgrade main governance contract", "chain": "x-layer"}'</pre>
