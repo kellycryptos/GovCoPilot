@@ -41,7 +41,10 @@ export async function analyzeProposal(input: ProposalInput): Promise<ProposalAna
 
   const groq = new Groq({ apiKey });
 
-  const model = process.env.GROQ_MODEL || 'qwen/qwen3.6-27b';
+  // Only models that support Groq's json_object response_format:
+  // llama-3.3-70b-versatile, llama3-70b-8192, mixtral-8x7b-32768, gemma2-9b-it
+  // qwen models do NOT support json_object mode — they will return a 400 error.
+  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
   const systemPrompt = `You are GovCoPilot, an expert AI agent specializing in DAO governance, risk assessment, and onchain execution. Your job is to analyze governance proposals and recommend voting strategies with high precision.
 
@@ -102,7 +105,20 @@ Provide your analysis, strategic voting recommendation, and execution steps (opt
       throw new Error('Groq returned empty response.');
     }
 
-    return JSON.parse(content) as ProposalAnalysisResult;
+    // Attempt direct parse first, then fall back to extracting JSON from markdown fences
+    let parsed: ProposalAnalysisResult;
+    try {
+      parsed = JSON.parse(content) as ProposalAnalysisResult;
+    } catch {
+      const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (match && match[1]) {
+        parsed = JSON.parse(match[1].trim()) as ProposalAnalysisResult;
+      } else {
+        throw new Error('Groq response could not be parsed as JSON.');
+      }
+    }
+
+    return parsed;
   } catch (error) {
     console.error('Error during Groq API call:', error);
     throw error;
