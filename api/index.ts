@@ -27,7 +27,7 @@ app.get('/', (req, res) => {
 
 // Public health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', name: 'GovCoPilot ASP', version: '1.0.0' });
+  res.json({ status: 'ok', name: 'GovCoPilot ASP', version: '1.0.1' });
 });
 
 // REST API endpoint for proposal analysis (protected by x402 payment middleware)
