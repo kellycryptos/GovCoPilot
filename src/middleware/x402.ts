@@ -5,10 +5,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Configuration from env variables
-const ASP_WALLET_ADDRESS = process.env.ASP_WALLET_ADDRESS || '0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b'; // Payout address
-const REQUIRED_AMOUNT = process.env.PAYMENT_AMOUNT || '0.05'; // e.g., 0.05 USDC or OKB
-const CHAIN_ID = process.env.CHAIN_ID || '195'; // Default: X Layer Testnet (195)
-const RPC_URL = process.env.X_LAYER_RPC_URL || 'https://xlayertestrpc.okx.com'; // X Layer Testnet RPC
+const ASP_WALLET_ADDRESS = process.env.ASP_WALLET_ADDRESS || '0xf313dcef4e1e22c01cea636c2631c74eac6e4518'; // Mainnet Payout address
+const REQUIRED_AMOUNT = process.env.PAYMENT_AMOUNT || '0.05'; // 0.05 USDT or OKB
+const CHAIN_ID = process.env.CHAIN_ID || '196'; // Default: X Layer Mainnet (196)
+const RPC_URL = process.env.X_LAYER_RPC_URL || 'https://rpc.xlayer.tech'; // X Layer Mainnet RPC
 
 // Memory store to prevent replay attacks
 const verifiedTransactions = new Set<string>();
@@ -63,24 +63,28 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
       return;
     }
 
-    // Verify transaction recipient
-    if (!tx.to || tx.to.toLowerCase() !== ASP_WALLET_ADDRESS.toLowerCase()) {
+    // Verify transaction recipient (native transfer OR ERC20 transfer)
+    let isRecipientMatch = false;
+    const isTokenTransfer = tx.data && tx.data.startsWith('0xa9059cbb');
+
+    if (isTokenTransfer && tx.data.length >= 74) {
+      const parsedRecipient = '0x' + tx.data.slice(34, 74);
+      isRecipientMatch = parsedRecipient.toLowerCase() === ASP_WALLET_ADDRESS.toLowerCase();
+    } else if (tx.to) {
+      isRecipientMatch = tx.to.toLowerCase() === ASP_WALLET_ADDRESS.toLowerCase();
+    }
+
+    if (!isRecipientMatch) {
       res.status(400).json({
         error: 'Invalid Payment',
-        message: `Transaction recipient does not match GovCoPilot. Expected: ${ASP_WALLET_ADDRESS}, got: ${tx.to}`,
+        message: `Transaction recipient does not match GovCoPilot. Expected: ${ASP_WALLET_ADDRESS}`,
       });
       return;
     }
 
     // Verify transaction value
-    // Note: For native token transfer, tx.value is in wei.
-    // If it's a ERC20 token (like USDC) transaction, we'd need to parse the log/calldata.
-    // As an MVP/Hackathon showcase, we check native value first, or accept transaction if value > 0 for demo purposes.
     const txValueEth = parseFloat(tx.value.toString()) / 1e18;
     const requiredAmountNum = parseFloat(REQUIRED_AMOUNT);
-
-    // If it is a token transfer (value is 0 but has input data), we can parse input or allow it for demo.
-    const isTokenTransfer = tx.data && tx.data !== '0x';
 
     if (!isTokenTransfer && txValueEth < requiredAmountNum) {
       res.status(400).json({
