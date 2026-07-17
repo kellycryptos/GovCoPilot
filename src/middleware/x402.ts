@@ -63,21 +63,14 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
       return;
     }
 
-    // Verify transaction recipient (native transfer OR ERC20 transfer)
+    // Verify transaction recipient (native transfer, ERC20 transfer, or AA UserOp)
     let isRecipientMatch = false;
-    const isTokenTransfer = tx.data && tx.data.startsWith('0xa9059cbb');
+    const targetAddressClean = ASP_WALLET_ADDRESS.toLowerCase().replace(/^0x/, '');
 
-    const validRecipients = [
-      ASP_WALLET_ADDRESS.toLowerCase(),
-      '0xf313dcef4e1e22c01cea636c2631c74eac6e4518'.toLowerCase(),
-      '0xc91766bfeb093cf177936e95ff187ff7cc13fe5b'.toLowerCase()
-    ];
-
-    if (isTokenTransfer && tx.data.length >= 74) {
-      const parsedRecipient = ('0x' + tx.data.slice(34, 74)).toLowerCase();
-      isRecipientMatch = validRecipients.includes(parsedRecipient);
-    } else if (tx.to) {
-      isRecipientMatch = validRecipients.includes(tx.to.toLowerCase());
+    if (tx.to && tx.to.toLowerCase() === ASP_WALLET_ADDRESS.toLowerCase()) {
+      isRecipientMatch = true;
+    } else if (tx.data && tx.data.toLowerCase().includes(targetAddressClean)) {
+      isRecipientMatch = true;
     }
 
     if (!isRecipientMatch) {
