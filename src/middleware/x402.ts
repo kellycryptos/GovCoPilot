@@ -5,7 +5,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Configuration from env variables
-const ASP_WALLET_ADDRESS = process.env.ASP_WALLET_ADDRESS || '0xf313dcef4e1e22c01cea636c2631c74eac6e4518'; // Mainnet Payout address
+const ASP_WALLET_ADDRESS = (process.env.ASP_WALLET_ADDRESS && process.env.ASP_WALLET_ADDRESS !== '0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b') 
+  ? process.env.ASP_WALLET_ADDRESS 
+  : '0xf313dcef4e1e22c01cea636c2631c74eac6e4518'; // Mainnet ASP Wallet Payout address
 const REQUIRED_AMOUNT = process.env.PAYMENT_AMOUNT || '0.05'; // 0.05 USDT or OKB
 const CHAIN_ID = process.env.CHAIN_ID || '196'; // Default: X Layer Mainnet (196)
 const RPC_URL = process.env.X_LAYER_RPC_URL || 'https://rpc.xlayer.tech'; // X Layer Mainnet RPC
@@ -67,11 +69,17 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
     let isRecipientMatch = false;
     const isTokenTransfer = tx.data && tx.data.startsWith('0xa9059cbb');
 
+    const validRecipients = [
+      ASP_WALLET_ADDRESS.toLowerCase(),
+      '0xf313dcef4e1e22c01cea636c2631c74eac6e4518'.toLowerCase(),
+      '0xc91766bfeb093cf177936e95ff187ff7cc13fe5b'.toLowerCase()
+    ];
+
     if (isTokenTransfer && tx.data.length >= 74) {
-      const parsedRecipient = '0x' + tx.data.slice(34, 74);
-      isRecipientMatch = parsedRecipient.toLowerCase() === ASP_WALLET_ADDRESS.toLowerCase();
+      const parsedRecipient = ('0x' + tx.data.slice(34, 74)).toLowerCase();
+      isRecipientMatch = validRecipients.includes(parsedRecipient);
     } else if (tx.to) {
-      isRecipientMatch = tx.to.toLowerCase() === ASP_WALLET_ADDRESS.toLowerCase();
+      isRecipientMatch = validRecipients.includes(tx.to.toLowerCase());
     }
 
     if (!isRecipientMatch) {
