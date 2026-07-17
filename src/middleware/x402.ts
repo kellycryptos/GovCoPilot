@@ -84,6 +84,7 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
     // Verify transaction value
     const txValueEth = parseFloat(tx.value.toString()) / 1e18;
     const requiredAmountNum = parseFloat(REQUIRED_AMOUNT);
+    const isTokenTransfer = Boolean(tx.data && tx.data !== '0x');
 
     if (!isTokenTransfer && txValueEth < requiredAmountNum) {
       res.status(400).json({
