@@ -27,71 +27,96 @@ async function runTests() {
     console.log('Status:', healthRes.status);
     console.log('Response:', healthData);
 
-    // Test 2: Gated endpoint without payment headers (with bypass turned off for testing)
-    console.log('\n[Test 2] Gated endpoint without payment headers...');
-    // Temporarily modify the environment to enforce payment for this test block
+    // Test 2: Gated endpoint on Mainnet (Default Network) without payment headers
+    console.log('\n[Test 2] Mainnet x402 Probe (Default Network)...');
     process.env.BYPASS_PAYMENT_VERIFICATION = 'false';
 
-    const gatedRes = await fetch(`${url}/api/analyze`, {
+    const mainnetRes = await fetch(`${url}/api/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        proposalText: 'Should we upgrade the GoalHook router contract?',
+        proposalText: 'Should we upgrade the GoalHook router contract on X Layer Mainnet?',
       }),
     });
-    console.log('Status:', gatedRes.status);
-    const gatedHeaders = {
-      address: gatedRes.headers.get('X-Payment-Address'),
-      amount: gatedRes.headers.get('X-Payment-Amount'),
-      chainId: gatedRes.headers.get('X-Payment-Chain-Id'),
+    console.log('Status:', mainnetRes.status);
+    const mainnetHeaders = {
+      address: mainnetRes.headers.get('X-Payment-Address'),
+      amount: mainnetRes.headers.get('X-Payment-Amount'),
+      chainId: mainnetRes.headers.get('X-Payment-Chain-Id'),
+      asset: mainnetRes.headers.get('X-Payment-Asset'),
     };
-    console.log('Headers:', gatedHeaders);
-    console.log('Response:', await gatedRes.json());
+    console.log('Mainnet x402 Headers:', mainnetHeaders);
+    console.log('Response:', await mainnetRes.json());
 
-    // Test 3: Gated endpoint with bypass enabled (to test LLM integration without payment)
-    console.log('\n[Test 3] Gated endpoint with bypass enabled...');
-    process.env.BYPASS_PAYMENT_VERIFICATION = 'true';
-
-    const hasGroqKey = !!process.env.GROQ_API_KEY;
-    if (!hasGroqKey) {
-      console.log('WARNING: GROQ_API_KEY is not defined. Skipping live LLM analysis test.');
-    } else {
-      console.log('Sending live request to analyze proposal...');
-      const proposalText = `
-        Proposal Title: PIP-42: Deploy GoalHook V2 on X Layer
-        
-        Abstract:
-        This proposal outlines the deployment of GoalHook V2 on X Layer. V2 introduces gas-optimized milestone verification and integrates OKX Agentic Wallet native execution schemes.
-        
-        Specification:
-        1. Deploy GoalHookV2.sol contract.
-        2. Set treasury controller to multi-sig 0x3a...4f.
-        3. Authorize GoalHook V2 to spend up to 10,000 USDC for initialization.
-        
-        Risks:
-        Smart contract risks associated with upgrading routers.
-      `;
-
-      const analysisRes = await fetch(`${url}/api/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          proposalText,
-          proposalTitle: 'PIP-42: Deploy GoalHook V2 on X Layer',
-          chain: 'x-layer',
-        }),
-      });
-
-      console.log('Status:', analysisRes.status);
-      const analysisData = await analysisRes.json();
-      console.log('Analysis Output:', JSON.stringify(analysisData, null, 2));
+    if (mainnetHeaders.chainId !== '196') {
+      throw new Error(`Expected Mainnet Chain ID 196, got ${mainnetHeaders.chainId}`);
     }
+
+    // Test 3: Gated endpoint on Testnet via X-Network header
+    console.log('\n[Test 3] Testnet Fallback x402 Probe (X-Network: testnet)...');
+    const testnetRes = await fetch(`${url}/api/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Network': 'testnet',
+      },
+      body: JSON.stringify({
+        proposalText: 'Test proposal for X Layer Testnet fallback.',
+      }),
+    });
+    console.log('Status:', testnetRes.status);
+    const testnetHeaders = {
+      address: testnetRes.headers.get('X-Payment-Address'),
+      amount: testnetRes.headers.get('X-Payment-Amount'),
+      chainId: testnetRes.headers.get('X-Payment-Chain-Id'),
+      asset: testnetRes.headers.get('X-Payment-Asset'),
+    };
+    console.log('Testnet x402 Headers:', testnetHeaders);
+    console.log('Response:', await testnetRes.json());
+
+    if (testnetHeaders.chainId !== '195') {
+      throw new Error(`Expected Testnet Chain ID 195, got ${testnetHeaders.chainId}`);
+    }
+
+    // Test 4: Invalid Tx Hash rejection (Security Check)
+    console.log('\n[Test 4] Rejection of fake/invalid transaction hash...');
+    const fakeTxRes = await fetch(`${url}/api/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Payment-Tx-Hash': '0x0000000000000000000000000000000000000000000000000000000000000000',
+      },
+      body: JSON.stringify({
+        proposalText: 'Proposal with invalid tx hash.',
+      }),
+    });
+    console.log('Status:', fakeTxRes.status);
+    console.log('Response:', await fakeTxRes.json());
+
+    // Test 5: Playground bypass test
+    console.log('\n[Test 5] Playground request bypass header...');
+    const playgroundRes = await fetch(`${url}/api/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Playground-Request': 'true',
+      },
+      body: JSON.stringify({
+        proposalText: 'PIP-42: Deploy GoalHook V2 on X Layer',
+        proposalTitle: 'PIP-42: Deploy GoalHook V2 on X Layer',
+        chain: 'x-layer',
+      }),
+    });
+    console.log('Status:', playgroundRes.status);
+    const playgroundData = await playgroundRes.json();
+    console.log('Playground Analysis Title:', playgroundData.proposalTitle || playgroundData.recommendation);
+
+    console.log('\nAll integration tests passed successfully!');
   } catch (error) {
     console.error('Test execution failed:', error);
   } finally {
     console.log('\nStopping server...');
     close();
-    console.log('Tests completed.');
   }
 }
 

@@ -374,7 +374,10 @@ Steps:
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div class="lg:col-span-5 space-y-6">
           <div class="bg-zinc-900 border border-zinc-850 p-6 rounded-2xl">
-            <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Request Details</h4>
+            <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center justify-between">
+              <span>Request Details</span>
+              <span class="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded-full">Mainnet 196 (Default)</span>
+            </h4>
             <div class="space-y-3 text-sm">
               <div class="flex justify-between border-b border-zinc-800 pb-2">
                 <span class="text-zinc-400">Method</span>
@@ -388,6 +391,10 @@ Steps:
                 <span class="text-zinc-400">Header required</span>
                 <span class="font-medium text-white code-font text-xs">X-Payment-Tx-Hash</span>
               </div>
+              <div class="flex justify-between border-b border-zinc-800 pb-2">
+                <span class="text-zinc-400">Optional Header</span>
+                <span class="font-medium text-xlayer-cyan code-font text-xs">X-Network: testnet</span>
+              </div>
             </div>
           </div>
           
@@ -396,7 +403,7 @@ Steps:
             <ol class="list-decimal list-inside text-sm text-zinc-400 space-y-2">
               <li>Call `/api/analyze_governance_proposal` without the tx hash header.</li>
               <li>Receive `402 Payment Required` + payment wallet metadata headers.</li>
-              <li>Broadcast payment on X Layer (native token/USDC).</li>
+              <li>Broadcast 0.05 USDT payment on X Layer (Mainnet Chain ID 196 or Testnet 195).</li>
               <li>Retry request including the tx hash in the `X-Payment-Tx-Hash` header.</li>
             </ol>
           </div>
@@ -417,7 +424,9 @@ curl -i -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
 <span class="text-zinc-600"># Response will include headers:
 # X-Payment-Address: 0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b
 # X-Payment-Amount: 0.05
-# X-Payment-Chain-Id: 195</span>
+# X-Payment-Asset: USDT
+# X-Payment-Chain-Id: 196 (X Layer Mainnet default)
+# (Pass 'X-Network: testnet' header for Chain ID 195 fallback)</span>
 
 <span class="text-zinc-600"># 2. Re-send once you submit the tx onchain with the Tx Hash</span>
 curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
