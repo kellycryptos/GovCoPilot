@@ -2,11 +2,22 @@
 
 **Autonomous DAO Governance Co-Pilot, built on X Layer**
 
-GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns a structured, machine-readable recommendation ,strategic alignment, security risk assessment, a confidence-scored vote recommendation, and ready-to-execute EVM calldata ,all via a single x402-paid API call.
+GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns structured, machine-readable recommendations: strategic alignment, financial impact, security risk assessment, a confidence-scored voting recommendation, and ready-to-execute EVM calldata — all via a single x402-paid API call.
 
-Built for the agent-to-agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's endpoint, pays per-call in testnet OKB/USDC via x402, and receives back everything it needs to make and execute a governance decision autonomously ,no negotiation, no human in the loop.
+Built for the agent-to-agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's endpoint, pays per-call in testnet/mainnet tokens (e.g. USDT on X Layer) via x402, and receives back everything it needs to make and execute a governance decision autonomously — no negotiation, no human in the loop.
 
-GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platform with 900+ real proposals on Arc Testnet, and is optimized for X Layer's fast finality and low fees, with native OKX Agentic Wallet integration for programmatic per-call payments.
+GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platform with 900+ real proposals on Arc Testnet, and is optimized for X Layer's fast finality and low fees, with native OKX Agentic Wallet & Onchain OS integration.
+
+---
+
+## Key Technical & Architectural Highlights
+
+- **HTTP x402 Payment Protocol:** Gated API returning `402 Payment Required` with custom payment headers (`X-Payment-Address`, `X-Payment-Amount`, `X-Payment-Chain-Id`, `X-Payment-Asset`, `X-Payment-Token-Address`).
+- **On-Chain Transaction Verification:** Interacts directly with X Layer RPC nodes to verify broadcasted transactions across direct native transfers, ERC20 transfers (e.g., USDT), and Account Abstraction (AA) userOps.
+- **Replay Attack Protection:** Tracks verified transaction hashes in middleware to prevent transaction replay reuse.
+- **LLM Reasoning Engine:** Powered by Groq `llama-3.3-70b-versatile` with enforced JSON output schema for deterministic machine parsing.
+- **Multi-Network Support:** Defaults to X Layer Mainnet (Chain ID `196`), with seamless fallback to X Layer Testnet (Chain ID `195`) via `X-Network: testnet` header or query string.
+- **Zero-Friction Playground:** Built-in `X-Playground-Request` header bypass for developers and hackathon judges to evaluate without broadcasting live transactions.
 
 ---
 
@@ -18,11 +29,11 @@ DAO governance today is broken for both humans and agents:
 - **Treasury security risk** — malicious proposals can drain funds via obfuscated router updates or contract upgrades.
 - **No agent-native tooling** — AI agents have no standardized way to analyze a proposal and generate an executable transaction.
 
-GovCoPilot gives any agent a single, paid, standardized endpoint to solve both.
+GovCoPilot gives any agent a single, paid, standardized endpoint to solve all three.
 
 ---
 
-## Live Demo
+## Live Demo & Resources
 
 - **Playground:** https://gov-copilot.vercel.app/#playground (payment bypassed for testing — see below)
 - **GitHub:** https://github.com/kellycryptos/GovCoPilot
@@ -31,30 +42,30 @@ GovCoPilot gives any agent a single, paid, standardized endpoint to solve both.
 
 ## Network & Deployment Details
 
-| Field | Value |
-|---|---|
-| Network | X Layer **Testnet** |
-| Chain ID | `195` |
-| RPC URL | `https://xlayertestrpc.okx.com` |
-| Payment Address (ASP wallet) | `0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b` |
-| Payment amount per call | 0.05 (native token/USDC, testnet) |
-| Smart contract | None — payment is a direct EOA-to-EOA transfer, verified onchain by tx hash |
-
-> This is a testnet deployment. No real funds are used or at risk. The payment address above is a wallet controlled by the project maintainer for testnet demo purposes only.
+| Field | Mainnet (Default) | Testnet |
+|---|---|---|
+| **Network** | X Layer Mainnet | X Layer Testnet |
+| **Chain ID** | `196` | `195` |
+| **RPC URL** | `https://rpc.xlayer.tech` | `https://xlayertestrpc.okx.com` |
+| **Explorer** | [X Layer Mainnet Explorer](https://www.okx.com/web3/explorer/xlayer) | [X Layer Testnet Explorer](https://www.okx.com/web3/explorer/xlayer-test) |
+| **Payment Address (ASP Wallet)** | `0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b` | `0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b` |
+| **Payment Asset & Fee** | 0.05 USDT (`0x1E4a...D41d`) | 0.05 USDT / Native OKB |
 
 ---
 
 ## API Reference
 
-**Endpoint:** `POST /api/analyze_governance_proposal`
+**Endpoints:** `POST /api/analyze_governance_proposal` or `POST /api/analyze`
 
 **Required header (after payment):** `X-Payment-Tx-Hash`
 
+**Optional headers:** `X-Network: testnet` (select testnet), `X-Playground-Request: true` (bypass payment for testing)
+
 ### x402 Flow
 
-1. Call the endpoint without a tx hash header.
-2. Receive `402 Payment Required` with payment coordinates in the response headers/body.
-3. Broadcast payment on X Layer Testnet (native token/USDC) to the address above.
+1. Call the endpoint without a transaction hash header.
+2. Receive `402 Payment Required` with payment coordinates in the response headers and body.
+3. Broadcast payment on X Layer (USDT / OKB) to the ASP wallet address.
 4. Retry the request including the transaction hash in the `X-Payment-Tx-Hash` header.
 
 ### cURL Example
@@ -65,10 +76,11 @@ curl -i -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
   -H "Content-Type: application/json" \
   -d '{"proposalText": "Upgrade main governance contract"}'
 
-# Response includes headers:
+# Response headers:
 # X-Payment-Address: 0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b
 # X-Payment-Amount: 0.05
-# X-Payment-Chain-Id: 195
+# X-Payment-Asset: USDT
+# X-Payment-Chain-Id: 196
 
 # 2. Re-send once you submit the tx onchain with the Tx Hash
 curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
@@ -77,24 +89,26 @@ curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
   -d '{"proposalText": "Upgrade main governance contract", "chain": "x-layer"}'
 ```
 
-### Example Response
+### Response Schema
 
 ```json
 {
-  "proposalSummary": "Upgrades Governor router to V2 on X Layer...",
+  "proposalSummary": "Upgrades Governor router to V2 on X Layer to optimize swap routing...",
   "analysis": {
-    "strategicAlignment": "High alignment. Improves gas efficiency...",
-    "financialImpact": "...",
-    "securityRisks": "No immediate smart contract risks identified...",
-    "opportunities": "..."
+    "strategicAlignment": "High alignment. Improves gas efficiency and reduces execution latency.",
+    "financialImpact": "Saves 15% in swap routing fees across treasury operations.",
+    "securityRisks": "No malicious proxy patterns detected in target contract byte code.",
+    "opportunities": "Enables cross-chain liquidity aggregation on X Layer."
   },
   "votingRecommendation": {
     "vote": "YES",
     "confidence": 0.94,
-    "reasoning": "Saves 15% transaction fees and boosts router stability."
+    "reasoning": "Saves transaction fees and boosts router stability without introducing security risks."
   },
   "executionGuidance": {
-    "steps": ["Submit vote transaction to X Layer Governor at contract 0xabc..."],
+    "steps": [
+      "Submit vote transaction to X Layer Governor at target contract address."
+    ],
     "xLayerOptimizations": "Verify transaction has finality on block height > 50000.",
     "calldataHint": "cast send 0xabc... 'castVote(uint256,uint8)' 42 1"
   }
@@ -105,28 +119,30 @@ curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
 
 ## Playground (Testing Without Payment)
 
-The live playground bypasses payment for judges/testers via an internal `X-Playground-Request` header — no on-chain transaction required to try the analysis engine. Real agent-to-agent calls outside the playground still require the full x402 payment flow described above.
+The live playground bypasses payment for judges/testers via an internal `X-Playground-Request` header — no on-chain transaction required to try the analysis engine. Real agent-to-agent calls outside the playground still require the full x402 payment flow.
 
 ---
 
 ## Environment Variables
 
-See `.env.example` for required variables. Notably:
+See `.env.example` for required variables:
 
-- `ASP_WALLET_ADDRESS` — the testnet wallet receiving x402 payments
-- `CHAIN_ID` — `195` (X Layer Testnet)
-- `GROQ_API_KEY` — server-side only, never exposed to the client
+- `ASP_WALLET_ADDRESS` — ASP wallet receiving payments
+- `CHAIN_ID` — `196` (Mainnet) or `195` (Testnet)
+- `GROQ_API_KEY` — server-side AI key (never exposed to client)
+- `GROQ_MODEL` — defaults to `llama-3.3-70b-versatile`
 
 ---
 
-## Status
+## Status & Ecosystem Integration
 
 - Registered as an Agent-to-MCP (A2MCP) Agent Service Provider on OKX.AI via Onchain OS and OKX Agentic Wallet.
-- Currently in testnet deployment.
-- No external fundraising to date — self-funded, built as part of the SynArc ecosystem.
+- Deployed and live on X Layer Mainnet & Testnet.
+- Developed by the team behind SynArc.
 
 ---
 
 ## License
 
 MIT
+
