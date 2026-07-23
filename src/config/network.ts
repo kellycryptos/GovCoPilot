@@ -16,6 +16,15 @@ export interface NetworkConfig {
   paymentAsset: string;
 }
 
+const DEFAULT_ASP_ADDRESS = '0xf313dcef4e1e22c01cea636c2631c74eac6e4518';
+function getAspWalletAddress(): string {
+  const envAddr = process.env.ASP_WALLET_ADDRESS;
+  if (!envAddr || envAddr.toLowerCase() === '0xc91766bfeb093cf177936e95ff187ff7cc13fe5b') {
+    return DEFAULT_ASP_ADDRESS;
+  }
+  return envAddr;
+}
+
 export const NETWORKS: Record<'mainnet' | 'testnet', NetworkConfig> = {
   mainnet: {
     networkKey: 'mainnet',
@@ -24,7 +33,7 @@ export const NETWORKS: Record<'mainnet' | 'testnet', NetworkConfig> = {
     name: 'X Layer Mainnet',
     rpcUrl: process.env.X_LAYER_MAINNET_RPC_URL || process.env.X_LAYER_RPC_URL || 'https://rpc.xlayer.tech',
     explorerUrl: 'https://www.okx.com/web3/explorer/xlayer',
-    aspWalletAddress: process.env.ASP_WALLET_ADDRESS || '0xf313dcef4e1e22c01cea636c2631c74eac6e4518',
+    aspWalletAddress: getAspWalletAddress(),
     usdtContractAddress: '0x1E4a5963aBFD975d8c9021ce480b42188849D41d',
     paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
     paymentAsset: 'USDT',
@@ -36,7 +45,7 @@ export const NETWORKS: Record<'mainnet' | 'testnet', NetworkConfig> = {
     name: 'X Layer Testnet',
     rpcUrl: process.env.X_LAYER_TESTNET_RPC_URL || 'https://xlayertestrpc.okx.com',
     explorerUrl: 'https://www.okx.com/web3/explorer/xlayer-test',
-    aspWalletAddress: process.env.ASP_WALLET_ADDRESS || '0xf313dcef4e1e22c01cea636c2631c74eac6e4518',
+    aspWalletAddress: getAspWalletAddress(),
     usdtContractAddress: '0x1E4a5963aBFD975d8c9021ce480b42188849D41d',
     paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
     paymentAsset: 'USDT',
