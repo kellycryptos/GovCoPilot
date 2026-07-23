@@ -6,6 +6,7 @@ dotenv.config();
 export interface NetworkConfig {
   networkKey: 'mainnet' | 'testnet';
   chainId: string;
+  caip2ChainId: string;
   name: string;
   rpcUrl: string;
   explorerUrl: string;
@@ -19,10 +20,11 @@ export const NETWORKS: Record<'mainnet' | 'testnet', NetworkConfig> = {
   mainnet: {
     networkKey: 'mainnet',
     chainId: process.env.CHAIN_ID || '196',
+    caip2ChainId: process.env.CAIP2_CHAIN_ID || 'eip155:196',
     name: 'X Layer Mainnet',
     rpcUrl: process.env.X_LAYER_MAINNET_RPC_URL || process.env.X_LAYER_RPC_URL || 'https://rpc.xlayer.tech',
     explorerUrl: 'https://www.okx.com/web3/explorer/xlayer',
-    aspWalletAddress: process.env.ASP_WALLET_ADDRESS || '0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b',
+    aspWalletAddress: process.env.ASP_WALLET_ADDRESS || '0xf313dcef4e1e22c01cea636c2631c74eac6e4518',
     usdtContractAddress: '0x1E4a5963aBFD975d8c9021ce480b42188849D41d',
     paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
     paymentAsset: 'USDT',
@@ -30,10 +32,11 @@ export const NETWORKS: Record<'mainnet' | 'testnet', NetworkConfig> = {
   testnet: {
     networkKey: 'testnet',
     chainId: '195',
+    caip2ChainId: 'eip155:195',
     name: 'X Layer Testnet',
     rpcUrl: process.env.X_LAYER_TESTNET_RPC_URL || 'https://xlayertestrpc.okx.com',
     explorerUrl: 'https://www.okx.com/web3/explorer/xlayer-test',
-    aspWalletAddress: process.env.ASP_WALLET_ADDRESS || '0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b',
+    aspWalletAddress: process.env.ASP_WALLET_ADDRESS || '0xf313dcef4e1e22c01cea636c2631c74eac6e4518',
     usdtContractAddress: '0x1E4a5963aBFD975d8c9021ce480b42188849D41d',
     paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
     paymentAsset: 'USDT',

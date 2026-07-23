@@ -5,7 +5,7 @@ import { AddressInfo } from 'net';
 
 dotenv.config();
 
-const ASP_ADDRESS = process.env.ASP_WALLET_ADDRESS || '0xC91766bfeB093cF177936E95FF187FF7Cc13fe5b';
+const ASP_ADDRESS = process.env.ASP_WALLET_ADDRESS || '0xf313dcef4e1e22c01cea636c2631c74eac6e4518';
 const USDT_ADDRESS = '0x1E4a5963aBFD975d8c9021ce480b42188849D41d';
 const MAINNET_RPC = process.env.X_LAYER_MAINNET_RPC_URL || 'https://rpc.xlayer.tech';
 
@@ -56,8 +56,8 @@ async function mainnetE2ETest() {
 
     console.log(`\nVerified 402 Headers: Recipient=${recipient}, Amount=${amount} ${asset}, ChainId=${chainId}`);
 
-    if (chainId !== '196') {
-      throw new Error(`Expected X Layer Mainnet Chain ID 196, got ${chainId}`);
+    if (!chainId || !chainId.includes('196')) {
+      throw new Error(`Expected X Layer Mainnet Chain ID 196 / eip155:196, got ${chainId}`);
     }
 
     // Step B: Submit real transaction or use provided TX hash

@@ -9,42 +9,76 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
   const isPlayground = req.header('X-Playground-Request') === 'true';
   const bypass = process.env.BYPASS_PAYMENT_VERIFICATION === 'true' || isPlayground;
   if (bypass) {
-    console.log('x402: Payment verification bypassed.');
+    console.log(`[x402] Payment verification bypassed for ${req.method} ${req.path} (Playground: ${isPlayground}).`);
     return next();
   }
 
   const networkConfig = getNetworkConfig(req);
-  const txHash = req.header('X-Payment-Tx-Hash');
+  const txHash = req.header('X-Payment-Tx-Hash') || req.header('X-Payment-Hash') || (req.body && req.body.paymentTxHash);
 
   if (!txHash) {
-    // If no txHash, return 402 Payment Required
-    res.setHeader(
-      'Access-Control-Expose-Headers',
-      'X-Payment-Address, X-Payment-Amount, X-Payment-Chain-Id, X-Payment-Asset, X-Payment-Token-Address'
-    );
-    res.setHeader('X-Payment-Address', networkConfig.aspWalletAddress);
-    res.setHeader('X-Payment-Amount', networkConfig.paymentAmount);
-    res.setHeader('X-Payment-Chain-Id', networkConfig.chainId);
-    res.setHeader('X-Payment-Asset', networkConfig.paymentAsset);
-    res.setHeader('X-Payment-Token-Address', networkConfig.usdtContractAddress);
+    const numericChainId = parseInt(networkConfig.chainId, 10);
+    const caip2ChainId = networkConfig.caip2ChainId; // e.g. 'eip155:196'
 
-    res.status(402).json({
+    // Build standard x402 payment offer object
+    const paymentOffer = {
+      x402Version: 1,
       error: 'Payment Required',
-      message: `To access GovCoPilot analyze_governance_proposal tool, pay ${networkConfig.paymentAmount} ${networkConfig.paymentAsset} to ${networkConfig.aspWalletAddress} on ${networkConfig.name} (Chain ID ${networkConfig.chainId}). Once paid, include the transaction hash in the 'X-Payment-Tx-Hash' header.`,
+      message: `To access GovCoPilot ASP analyze_governance_proposal tool, pay ${networkConfig.paymentAmount} ${networkConfig.paymentAsset} to ${networkConfig.aspWalletAddress} on ${networkConfig.name} (${caip2ChainId}). Include transaction hash in the 'X-Payment-Tx-Hash' header upon completion.`,
+      accepts: [
+        {
+          scheme: 'exact',
+          network: caip2ChainId,
+          chainId: caip2ChainId,
+          numericChainId: numericChainId,
+          asset: networkConfig.paymentAsset,
+          payTo: networkConfig.aspWalletAddress,
+          amount: networkConfig.paymentAmount,
+          tokenAddress: networkConfig.usdtContractAddress,
+          maxAmountRequired: networkConfig.paymentAmount,
+        },
+      ],
       paymentDetails: {
         recipient: networkConfig.aspWalletAddress,
         amount: networkConfig.paymentAmount,
         asset: networkConfig.paymentAsset,
-        chainId: networkConfig.chainId,
+        network: caip2ChainId,
+        chainId: caip2ChainId,
+        numericChainId: numericChainId,
+        caip2: caip2ChainId,
         tokenAddress: networkConfig.usdtContractAddress,
-        network: networkConfig.name,
+        networkName: networkConfig.name,
       },
-    });
+    };
+
+    // Encode PAYMENT-REQUIRED header for x402 v2 protocol compliance
+    const encodedOffer = Buffer.from(JSON.stringify(paymentOffer)).toString('base64');
+
+    res.setHeader(
+      'Access-Control-Expose-Headers',
+      'X-Payment-Address, X-Payment-Amount, X-Payment-Chain-Id, X-Payment-Network, X-Payment-Asset, X-Payment-Token-Address, PAYMENT-REQUIRED, WWW-Authenticate'
+    );
+    res.setHeader('X-Payment-Address', networkConfig.aspWalletAddress);
+    res.setHeader('X-Payment-Amount', networkConfig.paymentAmount);
+    res.setHeader('X-Payment-Chain-Id', caip2ChainId);
+    res.setHeader('X-Payment-Network', caip2ChainId);
+    res.setHeader('X-Payment-Asset', networkConfig.paymentAsset);
+    res.setHeader('X-Payment-Token-Address', networkConfig.usdtContractAddress);
+    res.setHeader('PAYMENT-REQUIRED', encodedOffer);
+
+    console.log(
+      `[x402] 402 Payment Required issued to ${req.ip || 'client'} for ${req.path}. Network: ${caip2ChainId}, Address: ${networkConfig.aspWalletAddress}, Fee: ${networkConfig.paymentAmount} ${networkConfig.paymentAsset}`
+    );
+
+    res.status(402).json(paymentOffer);
     return;
   }
 
+  console.log(`[x402] Verifying payment transaction ${txHash} on ${networkConfig.name} (${networkConfig.caip2ChainId})...`);
+
   // Prevent replay attacks
   if (verifiedTransactions.has(txHash.toLowerCase())) {
+    console.warn(`[x402] Replay attack detected: Transaction hash ${txHash} has already been used.`);
     res.status(400).json({
       error: 'Invalid Payment',
       message: 'This transaction hash has already been used for a previous request.',
@@ -57,9 +91,10 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
     const tx = await provider.getTransaction(txHash);
 
     if (!tx) {
+      console.warn(`[x402] Transaction ${txHash} not found on RPC node ${networkConfig.rpcUrl}.`);
       res.status(400).json({
         error: 'Invalid Payment',
-        message: `Transaction not found on ${networkConfig.name}. Please ensure the transaction hash is correct and has been broadcasted.`,
+        message: `Transaction not found on ${networkConfig.name} (${networkConfig.caip2ChainId}). Please verify transaction hash and broadcast status.`,
       });
       return;
     }
@@ -83,6 +118,7 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
     }
 
     if (!isRecipientMatch) {
+      console.warn(`[x402] Recipient mismatch for tx ${txHash}. Target expected: ${networkConfig.aspWalletAddress}, actual tx.to: ${tx.to}`);
       res.status(400).json({
         error: 'Invalid Payment',
         message: `Transaction recipient does not match GovCoPilot ASP address on ${networkConfig.name}. Expected recipient: ${networkConfig.aspWalletAddress}`,
@@ -92,6 +128,7 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
 
     // Wait for block confirmation
     if (!tx.blockNumber) {
+      console.warn(`[x402] Transaction ${txHash} is still pending (unconfirmed block).`);
       res.status(400).json({
         error: 'Invalid Payment',
         message: `Transaction is still pending on ${networkConfig.name}. Please wait for block confirmation.`,
@@ -101,10 +138,10 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
 
     // Success! Mark transaction as used and proceed
     verifiedTransactions.add(txHash.toLowerCase());
-    console.log(`x402: Payment verified successfully on ${networkConfig.name} (Chain ID ${networkConfig.chainId}) for tx: ${txHash}`);
+    console.log(`[x402] SUCCESS: Payment verified on ${networkConfig.name} (${networkConfig.caip2ChainId}) for tx: ${txHash}`);
     next();
   } catch (error: any) {
-    console.error(`Error verifying payment on ${networkConfig.name}:`, error);
+    console.error(`[x402] ERROR verifying payment on ${networkConfig.name}:`, error);
     res.status(500).json({
       error: 'Payment Verification Error',
       message: `Failed to verify payment on ${networkConfig.name}: ${error.message || error}`,

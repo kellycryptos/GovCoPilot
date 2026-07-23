@@ -12,7 +12,33 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Payment-Tx-Hash',
+      'X-Payment-Hash',
+      'X-Network',
+      'X-Playground-Request',
+      'PAYMENT-SIGNATURE',
+      'X-PAYMENT',
+    ],
+    exposedHeaders: [
+      'X-Payment-Address',
+      'X-Payment-Amount',
+      'X-Payment-Chain-Id',
+      'X-Payment-Network',
+      'X-Payment-Asset',
+      'X-Payment-Token-Address',
+      'PAYMENT-REQUIRED',
+      'WWW-Authenticate',
+    ],
+  })
+);
+
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -32,11 +58,13 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     name: 'GovCoPilot ASP',
-    version: '1.0.1',
+    version: '1.0.2',
     network: net.name,
     chainId: net.chainId,
+    caip2ChainId: net.caip2ChainId,
     aspWalletAddress: net.aspWalletAddress,
     paymentAmount: `${net.paymentAmount} ${net.paymentAsset}`,
+    x402Compliant: true,
   });
 });
 

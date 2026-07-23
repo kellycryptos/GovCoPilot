@@ -48,8 +48,8 @@ async function runTests() {
     console.log('Mainnet x402 Headers:', mainnetHeaders);
     console.log('Response:', await mainnetRes.json());
 
-    if (mainnetHeaders.chainId !== '196') {
-      throw new Error(`Expected Mainnet Chain ID 196, got ${mainnetHeaders.chainId}`);
+    if (!mainnetHeaders.chainId || !mainnetHeaders.chainId.includes('196')) {
+      throw new Error(`Expected Mainnet Chain ID containing 196 or eip155:196, got ${mainnetHeaders.chainId}`);
     }
 
     // Test 3: Gated endpoint on Testnet via X-Network header
@@ -74,8 +74,8 @@ async function runTests() {
     console.log('Testnet x402 Headers:', testnetHeaders);
     console.log('Response:', await testnetRes.json());
 
-    if (testnetHeaders.chainId !== '195') {
-      throw new Error(`Expected Testnet Chain ID 195, got ${testnetHeaders.chainId}`);
+    if (!testnetHeaders.chainId || !testnetHeaders.chainId.includes('195')) {
+      throw new Error(`Expected Testnet Chain ID containing 195 or eip155:195, got ${testnetHeaders.chainId}`);
     }
 
     // Test 4: Invalid Tx Hash rejection (Security Check)
