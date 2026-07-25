@@ -415,7 +415,7 @@ Steps:
             <ol class="list-decimal list-inside text-sm text-zinc-400 space-y-2">
               <li>Call `/api/analyze_governance_proposal` without the tx hash header.</li>
               <li>Receive `402 Payment Required` + payment wallet metadata headers.</li>
-              <li>Broadcast 0.05 USDT payment on X Layer (Mainnet Chain ID 196 or Testnet 195).</li>
+              <li>Broadcast 0.05 USDT0 payment on X Layer (Mainnet Chain ID 196 or Testnet 195).</li>
               <li>Retry request including the tx hash in the `X-Payment-Tx-Hash` header.</li>
             </ol>
           </div>

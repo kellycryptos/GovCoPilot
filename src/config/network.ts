@@ -34,9 +34,9 @@ export const NETWORKS: Record<'mainnet' | 'testnet', NetworkConfig> = {
     rpcUrl: process.env.X_LAYER_MAINNET_RPC_URL || process.env.X_LAYER_RPC_URL || 'https://rpc.xlayer.tech',
     explorerUrl: 'https://www.okx.com/web3/explorer/xlayer',
     aspWalletAddress: getAspWalletAddress(),
-    usdtContractAddress: '0x1E4a5963aBFD975d8c9021ce480b42188849D41d',
+    usdtContractAddress: '0x779ded0c9e1022225f8e0630b35a9b54be713736',
     paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
-    paymentAsset: 'USDT',
+    paymentAsset: 'USDT0',
   },
   testnet: {
     networkKey: 'testnet',
@@ -46,9 +46,9 @@ export const NETWORKS: Record<'mainnet' | 'testnet', NetworkConfig> = {
     rpcUrl: process.env.X_LAYER_TESTNET_RPC_URL || 'https://xlayertestrpc.okx.com',
     explorerUrl: 'https://www.okx.com/web3/explorer/xlayer-test',
     aspWalletAddress: getAspWalletAddress(),
-    usdtContractAddress: '0x1E4a5963aBFD975d8c9021ce480b42188849D41d',
+    usdtContractAddress: '0x779ded0c9e1022225f8e0630b35a9b54be713736',
     paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
-    paymentAsset: 'USDT',
+    paymentAsset: 'USDT0',
   },
 };
 

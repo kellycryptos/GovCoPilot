@@ -6,7 +6,7 @@ import { AddressInfo } from 'net';
 dotenv.config();
 
 const ASP_ADDRESS = process.env.ASP_WALLET_ADDRESS || '0xf313dcef4e1e22c01cea636c2631c74eac6e4518';
-const USDT_ADDRESS = '0x1E4a5963aBFD975d8c9021ce480b42188849D41d';
+const USDT_ADDRESS = '0x779ded0c9e1022225f8e0630b35a9b54be713736';
 const MAINNET_RPC = process.env.X_LAYER_MAINNET_RPC_URL || 'https://rpc.xlayer.tech';
 
 const ERC20_ABI = [
@@ -64,13 +64,13 @@ async function mainnetE2ETest() {
     let txHash = process.env.MAINNET_PAYMENT_TX_HASH;
 
     if (!txHash && process.env.MAINNET_PAYER_PRIVATE_KEY) {
-      console.log('\n[Step B] Broadcasting real 0.05 USDT payment on X Layer Mainnet...');
+      console.log('\n[Step B] Broadcasting real 0.05 USDT0 payment on X Layer Mainnet...');
       const provider = new JsonRpcProvider(MAINNET_RPC);
       const wallet = new Wallet(process.env.MAINNET_PAYER_PRIVATE_KEY, provider);
       const usdt = new Contract(USDT_ADDRESS, ERC20_ABI, wallet);
 
       const parsedAmount = parseUnits(amount || '0.05', 6);
-      console.log(`Sending ${amount} USDT from ${wallet.address} to ${ASP_ADDRESS}...`);
+      console.log(`Sending ${amount} USDT0 from ${wallet.address} to ${ASP_ADDRESS}...`);
 
       const tx = await usdt.transfer(ASP_ADDRESS, parsedAmount);
       console.log(`Broadcasted Mainnet Tx: ${tx.hash}`);
@@ -84,7 +84,7 @@ async function mainnetE2ETest() {
       console.log('\n-------------------------------------------------------------');
       console.log('NOTICE: No MAINNET_PAYMENT_TX_HASH or MAINNET_PAYER_PRIVATE_KEY set.');
       console.log('To execute Step B automatically, set MAINNET_PAYER_PRIVATE_KEY in .env');
-      console.log(`Or manually send 0.05 USDT on X Layer Mainnet to ${ASP_ADDRESS}`);
+      console.log(`Or manually send 0.05 USDT0 on X Layer Mainnet to ${ASP_ADDRESS}`);
       console.log('and pass MAINNET_PAYMENT_TX_HASH=<txHash> when running this script.');
       console.log('-------------------------------------------------------------\n');
       return;
