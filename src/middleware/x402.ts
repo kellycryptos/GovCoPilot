@@ -7,9 +7,23 @@ const verifiedTransactions = new Set<string>();
 
 export async function x402Middleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   const isPlayground = req.header('X-Playground-Request') === 'true';
-  const bypass = process.env.BYPASS_PAYMENT_VERIFICATION === 'true' || isPlayground;
+  const isOkxSampling =
+    req.header('X-OKX-Sampling') === 'true' ||
+    req.header('X-Sampling-Request') === 'true' ||
+    req.header('X-OKX-Test') === 'true' ||
+    Boolean(req.header('X-OKX-Test-Wallet')) ||
+    Boolean(req.header('X-OKX-Agent-Id')) ||
+    (req.header('User-Agent')?.toLowerCase().includes('okx-sampling') ?? false);
+
+  const bypass = process.env.BYPASS_PAYMENT_VERIFICATION === 'true' || isPlayground || isOkxSampling;
   if (bypass) {
-    console.log(`[x402] Payment verification bypassed for ${req.method} ${req.path} (Playground: ${isPlayground}).`);
+    if (isOkxSampling) {
+      console.log(
+        `[OKX-Sampling] 🔍 Free sampling test call received from OKX platform wallet/agent (IP: ${req.ip || 'unknown'}, User-Agent: ${req.header('User-Agent') || 'N/A'}, Agent-Id: ${req.header('X-OKX-Agent-Id') || 'N/A'}). Payment bypassed for sampling.`
+      );
+    } else {
+      console.log(`[x402] Payment verification bypassed for ${req.method} ${req.path} (Playground: ${isPlayground}).`);
+    }
     return next();
   }
 
