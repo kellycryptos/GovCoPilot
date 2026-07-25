@@ -19,7 +19,7 @@ GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platfor
   - Full CORS header exposure (`Access-Control-Expose-Headers`) for cross-origin crawlers and web clients.
 - **On-Chain Transaction Verification:** Interacts directly with X Layer RPC nodes to verify broadcasted transactions across direct native transfers, ERC20 transfers (e.g., USDT), and Account Abstraction (AA) userOps.
 - **Replay Attack Protection:** Tracks verified transaction hashes in middleware to prevent transaction replay reuse.
-- **LLM Reasoning Engine:** Powered by Groq `llama-3.3-70b-versatile` with enforced JSON output schema for deterministic machine parsing.
+- **LLM Reasoning Engine:** Powered by Groq AI with enforced JSON output schema for deterministic machine parsing.
 - **Multi-Network Support:** Defaults to X Layer Mainnet (`eip155:196`), with seamless fallback to X Layer Testnet (`eip155:195`) via `X-Network: testnet` header or query string.
 - **Zero-Friction Playground:** Built-in `X-Playground-Request` header bypass for developers and hackathon judges to evaluate without broadcasting live transactions.
 
@@ -177,7 +177,7 @@ See `.env.example` for required variables:
 - `CHAIN_ID` — `196` (Mainnet) or `195` (Testnet)
 - `CAIP2_CHAIN_ID` — `eip155:196` (Mainnet) or `eip155:195` (Testnet)
 - `GROQ_API_KEY` — server-side AI key (never exposed to client)
-- `GROQ_MODEL` — defaults to `llama-3.3-70b-versatile`
+- `GROQ_MODEL` — optional server-side Groq model override
 
 ---
 
