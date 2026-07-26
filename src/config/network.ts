@@ -12,12 +12,14 @@ export interface NetworkConfig {
   explorerUrl: string;
   aspWalletAddress: string;
   usdtContractAddress: string;
-  paymentAmount: string;
+  paymentAmount: string;             // human-readable decimal, e.g. '0.05'
+  paymentAmountMinimalUnits: string; // integer string in token minimal units, e.g. '50000' (6 decimals)
   paymentAsset: string;
 }
 
 const DEFAULT_ASP_ADDRESS = '0xf313dcef4e1e22c01cea636c2631c74eac6e4518';
-const USDT0_MAINNET_ADDRESS = '0x779ded0c9e102225f8e0630b35a9b54be713736';
+// Correct USDT0 address on X Layer mainnet (was missing a '2' — typo now fixed)
+const USDT0_MAINNET_ADDRESS = '0x779ded0c9e1022225f8e0630b35a9b54be713736';
 
 function getAspWalletAddress(): string {
   const envAddr = process.env.ASP_WALLET_ADDRESS;
@@ -27,6 +29,8 @@ function getAspWalletAddress(): string {
   return envAddr;
 }
 
+// USDT0 has 6 decimals. 0.05 USDT = 50000 minimal units.
+// If PAYMENT_AMOUNT env var is changed, update PAYMENT_AMOUNT_MINIMAL_UNITS accordingly.
 export const MAINNET_CONFIG: NetworkConfig = {
   networkKey: 'mainnet',
   chainId: '196',
@@ -37,6 +41,7 @@ export const MAINNET_CONFIG: NetworkConfig = {
   aspWalletAddress: getAspWalletAddress(),
   usdtContractAddress: USDT0_MAINNET_ADDRESS,
   paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
+  paymentAmountMinimalUnits: process.env.PAYMENT_AMOUNT_MINIMAL_UNITS || '50000', // 0.05 USDT × 10^6
   paymentAsset: 'USDT0',
 };
 

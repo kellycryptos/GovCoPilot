@@ -1,11 +1,252 @@
 import { Request, Response, NextFunction } from 'express';
-import { JsonRpcProvider } from 'ethers';
+import { JsonRpcProvider, ethers } from 'ethers';
 import { getNetworkConfig } from '../config/network.js';
 
-// Memory store to prevent replay attacks
-const verifiedTransactions = new Set<string>();
+// ---------------------------------------------------------------------------
+// Replay-attack protection stores
+// ---------------------------------------------------------------------------
+const verifiedTxHashes = new Set<string>(); // for tx-hash path
+const usedEip3009Nonces = new Set<string>(); // for EIP-3009 path: "<from>-<nonce>"
 
+// ---------------------------------------------------------------------------
+// EIP-3009 / EIP-712 constants for USDT0 on X Layer mainnet
+// USD₮0 (USDT0) implements EIP-3009 transferWithAuthorization.
+// Domain values come from the OKX docs: extra.name = "USD₮0", extra.version = "1"
+// ---------------------------------------------------------------------------
+const EIP3009_DOMAIN = {
+  name: 'USD\u20ae0', // USD₮0
+  version: '1',
+  chainId: 196,
+  verifyingContract: '0x779ded0c9e1022225f8e0630b35a9b54be713736',
+};
+
+const EIP3009_TYPES = {
+  TransferWithAuthorization: [
+    { name: 'from',        type: 'address' },
+    { name: 'to',          type: 'address' },
+    { name: 'value',       type: 'uint256' },
+    { name: 'validAfter',  type: 'uint256' },
+    { name: 'validBefore', type: 'uint256' },
+    { name: 'nonce',       type: 'bytes32' },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Build the standard x402 v2 payment challenge object
+// Per OKX docs: base64-encode this and place in PAYMENT-REQUIRED response header.
+// The `amount` field MUST be a minimal-unit integer string (decimals=6).
+// ---------------------------------------------------------------------------
+function buildPaymentChallenge(networkConfig: ReturnType<typeof getNetworkConfig>, req: Request) {
+  const endpointUrl = `https://${req.headers.host || 'govcopilot.vercel.app'}${req.path}`;
+
+  return {
+    x402Version: 2,
+    resource: {
+      url: endpointUrl,
+      description: 'GovCoPilot — AI-powered DAO governance proposal analysis. Returns a structured risk assessment, voting recommendation, and key insights.',
+      mimeType: 'application/json',
+    },
+    accepts: [
+      {
+        scheme: 'exact',
+        network: networkConfig.caip2ChainId,             // "eip155:196"
+        asset: networkConfig.usdtContractAddress,         // USDT0 contract
+        amount: networkConfig.paymentAmountMinimalUnits,  // "50000" (0.05 USDT, 6 decimals)
+        payTo: networkConfig.aspWalletAddress,
+        maxTimeoutSeconds: 300,
+        extra: { name: 'USD\u20ae0', version: '1' },     // required by OKX validator
+      },
+    ],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Path A: Verify an EIP-3009 signed authorization (OKX automated payment flow)
+//
+// OKX's payment client sends X-PAYMENT as a base64-encoded JSON containing the
+// EIP-3009 authorization fields and signature. We verify the EIP-712 signature
+// cryptographically — no on-chain RPC call needed.
+// ---------------------------------------------------------------------------
+async function verifyEip3009Payment(
+  rawHeader: string,
+  networkConfig: ReturnType<typeof getNetworkConfig>
+): Promise<{ valid: boolean; reason?: string }> {
+  let payload: any;
+
+  try {
+    const decoded = Buffer.from(rawHeader, 'base64').toString('utf-8');
+    payload = JSON.parse(decoded);
+  } catch {
+    return { valid: false, reason: 'Could not base64-decode or JSON-parse X-PAYMENT header' };
+  }
+
+  // Support both flat payloads and nested { scheme, network, payload: {...} } wrappers
+  const auth = payload.payload ?? payload;
+
+  const { from, to, value, validAfter, validBefore, nonce, signature } = auth;
+
+  if (!from || !to || value === undefined || !nonce || !signature) {
+    return { valid: false, reason: 'EIP-3009 auth: missing required fields (from/to/value/nonce/signature)' };
+  }
+
+  // Recipient must match our wallet
+  if (to.toLowerCase() !== networkConfig.aspWalletAddress.toLowerCase()) {
+    return {
+      valid: false,
+      reason: `Payment recipient mismatch. Expected: ${networkConfig.aspWalletAddress}, got: ${to}`,
+    };
+  }
+
+  // Amount must meet or exceed our minimum
+  const required = BigInt(networkConfig.paymentAmountMinimalUnits);
+  let provided: bigint;
+  try {
+    provided = BigInt(value);
+  } catch {
+    return { valid: false, reason: `Invalid value field: ${value}` };
+  }
+  if (provided < required) {
+    return {
+      valid: false,
+      reason: `Insufficient payment. Required: ${required} minimal units, provided: ${provided}`,
+    };
+  }
+
+  // Time window checks
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  if (validAfter !== undefined && BigInt(validAfter) > now) {
+    return { valid: false, reason: 'Authorization not yet valid (validAfter is in the future)' };
+  }
+  if (validBefore !== undefined && BigInt(validBefore) < now) {
+    return { valid: false, reason: 'Authorization has expired (validBefore is in the past)' };
+  }
+
+  // Replay protection
+  const nonceKey = `${from.toLowerCase()}-${nonce}`;
+  if (usedEip3009Nonces.has(nonceKey)) {
+    return { valid: false, reason: 'EIP-3009 nonce already used (replay attack prevented)' };
+  }
+
+  // EIP-712 signature verification
+  try {
+    const message = {
+      from,
+      to,
+      value: BigInt(value),
+      validAfter: BigInt(validAfter ?? 0),
+      validBefore: BigInt(validBefore ?? now + BigInt(3600)),
+      nonce,
+    };
+
+    const recovered = ethers.verifyTypedData(EIP3009_DOMAIN, EIP3009_TYPES, message, signature);
+
+    if (recovered.toLowerCase() !== from.toLowerCase()) {
+      return {
+        valid: false,
+        reason: `EIP-712 signature mismatch. Recovered signer: ${recovered}, claimed from: ${from}`,
+      };
+    }
+  } catch (err: any) {
+    return { valid: false, reason: `EIP-712 verification threw: ${err.message}` };
+  }
+
+  // All checks passed — mark nonce consumed
+  usedEip3009Nonces.add(nonceKey);
+  return { valid: true };
+}
+
+// ---------------------------------------------------------------------------
+// Path B: Verify by on-chain tx hash lookup (manual / demo payment flow)
+//
+// This path preserves the original verified manual-payment capability.
+// Used when the payment header looks like a raw 0x transaction hash.
+// ---------------------------------------------------------------------------
+async function verifyTxHashPayment(
+  txHash: string,
+  networkConfig: ReturnType<typeof getNetworkConfig>
+): Promise<{ valid: boolean; reason?: string }> {
+  if (verifiedTxHashes.has(txHash.toLowerCase())) {
+    return { valid: false, reason: 'Transaction hash already used (replay attack prevented)' };
+  }
+
+  try {
+    const provider = new JsonRpcProvider(networkConfig.rpcUrl);
+    const tx = await provider.getTransaction(txHash);
+
+    if (!tx) {
+      return {
+        valid: false,
+        reason: `Transaction ${txHash} not found on ${networkConfig.name} (${networkConfig.caip2ChainId}). Verify hash and broadcast status.`,
+      };
+    }
+
+    if (!tx.blockNumber) {
+      return {
+        valid: false,
+        reason: `Transaction ${txHash} is still pending on ${networkConfig.name}. Wait for confirmation.`,
+      };
+    }
+
+    const targetAddr = networkConfig.aspWalletAddress.toLowerCase();
+    const usdtAddr   = networkConfig.usdtContractAddress.toLowerCase();
+    const targetStripped = targetAddr.replace(/^0x/, '');
+
+    const isRecipientMatch =
+      (tx.to && tx.to.toLowerCase() === targetAddr) ||
+      (tx.to && tx.to.toLowerCase() === usdtAddr && tx.data && tx.data.toLowerCase().includes(targetStripped)) ||
+      (tx.data && tx.data.toLowerCase().includes(targetStripped));
+
+    if (!isRecipientMatch) {
+      return {
+        valid: false,
+        reason: `Tx recipient does not match GovCoPilot wallet. Expected: ${networkConfig.aspWalletAddress}, tx.to: ${tx.to}`,
+      };
+    }
+
+    verifiedTxHashes.add(txHash.toLowerCase());
+    return { valid: true };
+  } catch (err: any) {
+    return { valid: false, reason: `On-chain lookup error: ${err.message}` };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Detect which payment format the header contains
+// ---------------------------------------------------------------------------
+function detectPaymentFormat(raw: string): 'eip3009' | 'txhash' | 'unknown' {
+  // Raw tx hash: starts with 0x and is 66 hex chars
+  if (/^0x[0-9a-fA-F]{64}$/.test(raw.trim())) return 'txhash';
+
+  // Try to base64-decode and look for EIP-3009 fields
+  try {
+    const decoded = Buffer.from(raw, 'base64').toString('utf-8');
+    const parsed = JSON.parse(decoded);
+    const auth = parsed.payload ?? parsed;
+    if (auth.signature || auth.from) return 'eip3009';
+  } catch {
+    // not base64 JSON
+  }
+
+  // Might be a JSON string directly (not base64)
+  try {
+    const parsed = JSON.parse(raw);
+    const auth = parsed.payload ?? parsed;
+    if (auth.signature || auth.from) return 'eip3009';
+  } catch {
+    // not JSON either
+  }
+
+  // Fallback: if it looks like a long hex-ish string, treat as tx hash
+  if (/^0x[0-9a-fA-F]+$/.test(raw.trim())) return 'txhash';
+
+  return 'unknown';
+}
+
+// ---------------------------------------------------------------------------
+// Main middleware
+// ---------------------------------------------------------------------------
 export async function x402Middleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // ── Bypass conditions ────────────────────────────────────────────────────
   const isPlayground = req.header('X-Playground-Request') === 'true';
   const isOkxSampling =
     req.header('X-OKX-Sampling') === 'true' ||
@@ -19,181 +260,107 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
   if (bypass) {
     if (isOkxSampling) {
       console.log(
-        `[OKX-Sampling] 🔍 Free sampling test call received from OKX platform wallet/agent (IP: ${req.ip || 'unknown'}, User-Agent: ${req.header('User-Agent') || 'N/A'}, Agent-Id: ${req.header('X-OKX-Agent-Id') || 'N/A'}). Payment bypassed for sampling.`
+        `[OKX-Sampling] Free sampling call (IP: ${req.ip || 'unknown'}, UA: ${req.header('User-Agent') || 'N/A'}, Agent-Id: ${req.header('X-OKX-Agent-Id') || 'N/A'}).`
       );
     } else {
-      console.log(`[x402] Payment verification bypassed for ${req.method} ${req.path} (Playground: ${isPlayground}).`);
+      console.log(`[x402] Payment bypass: ${req.method} ${req.path} (Playground: ${isPlayground}).`);
     }
     return next();
   }
 
   const networkConfig = getNetworkConfig(req);
-  let txHash =
+
+  // ── Extract raw payment token from any of the accepted headers ───────────
+  let rawPayment =
+    req.header('X-PAYMENT') ||
+    req.header('PAYMENT-SIGNATURE') ||
     req.header('X-Payment-Tx-Hash') ||
     req.header('X-Payment-Hash') ||
-    req.header('PAYMENT-SIGNATURE') ||
-    req.header('X-PAYMENT') ||
-    (req.body && req.body.paymentTxHash);
+    (req.body && req.body.paymentTxHash) ||
+    null;
 
-  if (!txHash) {
+  // Authorization header fallback
+  if (!rawPayment) {
     const authHeader = req.header('Authorization');
     if (authHeader) {
       const parts = authHeader.trim().split(/\s+/);
-      if (parts.length === 2 && (parts[0].toLowerCase() === 'bearer' || parts[0].toLowerCase() === 'payment')) {
-        txHash = parts[1];
-      } else {
-        txHash = authHeader;
-      }
+      rawPayment =
+        parts.length === 2 && ['bearer', 'payment'].includes(parts[0].toLowerCase())
+          ? parts[1]
+          : authHeader;
     }
   }
 
-  // If txHash is base64 encoded (e.g., from X-PAYMENT or PAYMENT-SIGNATURE payload)
-  if (txHash && !txHash.startsWith('0x')) {
-    try {
-      const decodedStr = Buffer.from(txHash, 'base64').toString('utf-8');
-      if (decodedStr.startsWith('{')) {
-        const parsed = JSON.parse(decodedStr);
-        txHash = parsed.txHash || parsed.transactionHash || parsed.hash || parsed.tx_hash || parsed.signature || txHash;
-      }
-    } catch {
-      // Keep original txHash string if decoding fails
-    }
-  }
-
-  if (!txHash) {
-    const numericChainId = 196;
-    const caip2ChainId = 'eip155:196';
-    const usdtContractAddress = '0x779ded0c9e102225f8e0630b35a9b54be713736';
-
-    // Build standard x402 payment offer object
-    const paymentOffer = {
-      x402Version: 1,
-      error: 'Payment Required',
-      message: `To access GovCoPilot ASP analyze_governance_proposal tool, pay ${networkConfig.paymentAmount} ${networkConfig.paymentAsset} (${usdtContractAddress}) to ${networkConfig.aspWalletAddress} on ${networkConfig.name} (${caip2ChainId}). Include transaction hash in the 'X-Payment-Tx-Hash' header upon completion.`,
-      accepts: [
-        {
-          scheme: 'exact',
-          network: caip2ChainId,
-          chainId: caip2ChainId,
-          numericChainId: numericChainId,
-          asset: networkConfig.paymentAsset,
-          payTo: networkConfig.aspWalletAddress,
-          amount: networkConfig.paymentAmount,
-          tokenAddress: usdtContractAddress,
-          maxAmountRequired: networkConfig.paymentAmount,
-        },
-      ],
-      paymentDetails: {
-        recipient: networkConfig.aspWalletAddress,
-        amount: networkConfig.paymentAmount,
-        asset: networkConfig.paymentAsset,
-        network: caip2ChainId,
-        chainId: caip2ChainId,
-        numericChainId: numericChainId,
-        caip2: caip2ChainId,
-        tokenAddress: usdtContractAddress,
-        networkName: networkConfig.name,
-      },
-    };
-
-    // Encode PAYMENT-REQUIRED header for x402 v2 protocol compliance
-    const encodedOffer = Buffer.from(JSON.stringify(paymentOffer)).toString('base64');
+  // ── No payment presented → issue 402 challenge ───────────────────────────
+  if (!rawPayment) {
+    const challenge = buildPaymentChallenge(networkConfig, req);
+    const encodedChallenge = Buffer.from(JSON.stringify(challenge)).toString('base64');
 
     res.setHeader(
       'Access-Control-Expose-Headers',
-      'X-Payment-Address, X-Payment-Amount, X-Payment-Chain-Id, X-Payment-Network, X-Payment-Asset, X-Payment-Token-Address, PAYMENT-REQUIRED, WWW-Authenticate'
+      'PAYMENT-REQUIRED, WWW-Authenticate, X-Payment-Address, X-Payment-Amount, X-Payment-Chain-Id, X-Payment-Network, X-Payment-Asset, X-Payment-Token-Address'
     );
+
+    // Primary x402 v2 header — this is what OKX's validator checks
+    res.setHeader('PAYMENT-REQUIRED', encodedChallenge);
+
+    // Supplementary informational headers (for tooling / explorers)
     res.setHeader('X-Payment-Address', networkConfig.aspWalletAddress);
-    res.setHeader('X-Payment-Amount', networkConfig.paymentAmount);
-    res.setHeader('X-Payment-Chain-Id', caip2ChainId);
-    res.setHeader('X-Payment-Network', caip2ChainId);
+    res.setHeader('X-Payment-Amount', networkConfig.paymentAmountMinimalUnits);
+    res.setHeader('X-Payment-Chain-Id', networkConfig.caip2ChainId);
+    res.setHeader('X-Payment-Network', networkConfig.caip2ChainId);
     res.setHeader('X-Payment-Asset', networkConfig.paymentAsset);
-    res.setHeader('X-Payment-Token-Address', usdtContractAddress);
-    res.setHeader('PAYMENT-REQUIRED', encodedOffer);
+    res.setHeader('X-Payment-Token-Address', networkConfig.usdtContractAddress);
     res.setHeader(
       'WWW-Authenticate',
-      `Payment realm="GovCoPilot", method="evm", chainId="${caip2ChainId}", token="${usdtContractAddress}"`
+      `Payment realm="GovCoPilot", method="evm", chainId="${networkConfig.caip2ChainId}", token="${networkConfig.usdtContractAddress}"`
     );
 
     console.log(
-      `[x402] 402 Payment Required issued to ${req.ip || 'client'} for ${req.path}. Network: ${caip2ChainId}, Token: ${usdtContractAddress}, Address: ${networkConfig.aspWalletAddress}, Fee: ${networkConfig.paymentAmount} ${networkConfig.paymentAsset}`
+      `[x402] 402 issued → IP: ${req.ip || 'client'}, path: ${req.path}, ` +
+      `network: ${networkConfig.caip2ChainId}, asset: ${networkConfig.usdtContractAddress}, ` +
+      `payTo: ${networkConfig.aspWalletAddress}, amount: ${networkConfig.paymentAmountMinimalUnits} (minimal units)`
     );
 
-    res.status(402).json(paymentOffer);
+    // Body: valid x402 v2 challenge structure
+    res.status(402).json(challenge);
     return;
   }
 
-  console.log(`[x402] Verifying payment transaction ${txHash} on ${networkConfig.name} (${networkConfig.caip2ChainId})...`);
+  // ── Payment header found → detect format and verify ─────────────────────
+  const format = detectPaymentFormat(rawPayment);
 
-  // Prevent replay attacks
-  if (verifiedTransactions.has(txHash.toLowerCase())) {
-    console.warn(`[x402] Replay attack detected: Transaction hash ${txHash} has already been used.`);
-    res.status(400).json({
-      error: 'Invalid Payment',
-      message: 'This transaction hash has already been used for a previous request.',
+  console.log(`[x402] Payment header received (format: ${format}), verifying for ${req.path}…`);
+
+  let result: { valid: boolean; reason?: string };
+
+  if (format === 'eip3009') {
+    // OKX automated payment flow: cryptographic EIP-3009 authorization
+    console.log('[x402] → EIP-3009 signed authorization path');
+    result = await verifyEip3009Payment(rawPayment, networkConfig);
+
+  } else if (format === 'txhash') {
+    // Manual/demo payment flow: on-chain tx hash lookup
+    const txHash = rawPayment.trim();
+    console.log(`[x402] → On-chain tx hash path (${txHash})`);
+    result = await verifyTxHashPayment(txHash, networkConfig);
+
+  } else {
+    // Unknown format — log the raw value for debugging and reject
+    console.warn(`[x402] Unknown payment header format. Raw value: ${rawPayment.substring(0, 100)}`);
+    result = { valid: false, reason: 'Unrecognised payment header format. Expected EIP-3009 authorization or 0x tx hash.' };
+  }
+
+  if (!result.valid) {
+    console.warn(`[x402] Payment verification FAILED: ${result.reason}`);
+    res.status(402).json({
+      x402Version: 2,
+      error: 'Payment verification failed',
+      reason: result.reason,
     });
     return;
   }
 
-  try {
-    const provider = new JsonRpcProvider(networkConfig.rpcUrl);
-    const tx = await provider.getTransaction(txHash);
-
-    if (!tx) {
-      console.warn(`[x402] Transaction ${txHash} not found on RPC node ${networkConfig.rpcUrl}.`);
-      res.status(400).json({
-        error: 'Invalid Payment',
-        message: `Transaction not found on ${networkConfig.name} (${networkConfig.caip2ChainId}). Please verify transaction hash and broadcast status.`,
-      });
-      return;
-    }
-
-    // Verify transaction recipient (native transfer, ERC20 USDT transfer, or AA UserOp)
-    let isRecipientMatch = false;
-    const targetAddressClean = networkConfig.aspWalletAddress.toLowerCase().replace(/^0x/, '');
-    const usdtAddressClean = networkConfig.usdtContractAddress.toLowerCase();
-
-    // 1. Direct transfer to ASP wallet
-    if (tx.to && tx.to.toLowerCase() === networkConfig.aspWalletAddress.toLowerCase()) {
-      isRecipientMatch = true;
-    } 
-    // 2. ERC20 transfer (e.g. USDT) where tx.to is token contract and data contains recipient
-    else if (tx.to && tx.to.toLowerCase() === usdtAddressClean && tx.data && tx.data.toLowerCase().includes(targetAddressClean)) {
-      isRecipientMatch = true;
-    }
-    // 3. Generic calldata match (smart account / multi-sig / proxy call containing ASP address)
-    else if (tx.data && tx.data.toLowerCase().includes(targetAddressClean)) {
-      isRecipientMatch = true;
-    }
-
-    if (!isRecipientMatch) {
-      console.warn(`[x402] Recipient mismatch for tx ${txHash}. Target expected: ${networkConfig.aspWalletAddress}, actual tx.to: ${tx.to}`);
-      res.status(400).json({
-        error: 'Invalid Payment',
-        message: `Transaction recipient does not match GovCoPilot ASP address on ${networkConfig.name}. Expected recipient: ${networkConfig.aspWalletAddress}`,
-      });
-      return;
-    }
-
-    // Wait for block confirmation
-    if (!tx.blockNumber) {
-      console.warn(`[x402] Transaction ${txHash} is still pending (unconfirmed block).`);
-      res.status(400).json({
-        error: 'Invalid Payment',
-        message: `Transaction is still pending on ${networkConfig.name}. Please wait for block confirmation.`,
-      });
-      return;
-    }
-
-    // Success! Mark transaction as used and proceed
-    verifiedTransactions.add(txHash.toLowerCase());
-    console.log(`[x402] SUCCESS: Payment verified on ${networkConfig.name} (${networkConfig.caip2ChainId}) for tx: ${txHash}`);
-    next();
-  } catch (error: any) {
-    console.error(`[x402] ERROR verifying payment on ${networkConfig.name}:`, error);
-    res.status(500).json({
-      error: 'Payment Verification Error',
-      message: `Failed to verify payment on ${networkConfig.name}: ${error.message || error}`,
-    });
-  }
+  console.log(`[x402] ✅ Payment verified (format: ${format}) for ${req.path}`);
+  next();
 }
