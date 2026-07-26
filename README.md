@@ -42,6 +42,7 @@ GovCoPilot gives any agent a single, paid, standardized endpoint to solve all th
 
 - **Playground:** https://gov-copilot.vercel.app/#playground (payment bypassed for testing — see below)
 - **GitHub:** https://github.com/kellycryptos/GovCoPilot
+- **X (Twitter):** https://x.com/govcopilot
 
 ---
 
