@@ -4,3 +4,5 @@ dist/
 *.log
 .gemini/
 .agents/
+.vercel
+tmp_avatar.png
