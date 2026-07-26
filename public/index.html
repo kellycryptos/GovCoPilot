@@ -102,7 +102,7 @@
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
         </span>
-        <span class="text-zinc-300 font-medium">Live on X Layer Mainnet (196) & Testnet (195) • A2MCP Service Provider</span>
+        <span class="text-zinc-300 font-medium">Live on X Layer Mainnet (196) • A2MCP Service Provider</span>
       </div>
       
       <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto mb-6 bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent leading-none">
@@ -133,8 +133,8 @@
           <div class="text-xs text-zinc-500 font-medium">Replay-Protected Payments</div>
         </div>
         <div class="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/40 backdrop-blur-sm">
-          <div class="text-xlayer-cyan font-bold text-lg mb-1">Mainnet & Testnet</div>
-          <div class="text-xs text-zinc-500 font-medium">Chain ID 196 & 195</div>
+          <div class="text-xlayer-cyan font-bold text-lg mb-1">X Layer Mainnet</div>
+          <div class="text-xs text-zinc-500 font-medium">Chain ID 196 (USDT0)</div>
         </div>
         <div class="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/40 backdrop-blur-sm">
           <div class="text-xlayer-cyan font-bold text-lg mb-1">OKX.AI A2MCP</div>
@@ -404,8 +404,8 @@ Steps:
                 <span class="font-medium text-white code-font text-xs">X-Payment-Tx-Hash</span>
               </div>
               <div class="flex justify-between border-b border-zinc-800 pb-2">
-                <span class="text-zinc-400">Optional Header</span>
-                <span class="font-medium text-xlayer-cyan code-font text-xs">X-Network: testnet</span>
+                <span class="text-zinc-400">Payment Token</span>
+                <span class="font-medium text-xlayer-cyan code-font text-xs">USDT0 (0x779d...7336)</span>
               </div>
             </div>
           </div>
@@ -415,7 +415,7 @@ Steps:
             <ol class="list-decimal list-inside text-sm text-zinc-400 space-y-2">
               <li>Call `/api/analyze_governance_proposal` without the tx hash header.</li>
               <li>Receive `402 Payment Required` + payment wallet metadata headers.</li>
-              <li>Broadcast 0.05 USDT0 payment on X Layer (Mainnet Chain ID 196 or Testnet 195).</li>
+              <li>Broadcast 0.05 USDT0 payment on X Layer Mainnet (`0x779ded0c9e102225f8e0630b35a9b54be713736`).</li>
               <li>Retry request including the tx hash in the `X-Payment-Tx-Hash` header.</li>
             </ol>
           </div>
@@ -436,9 +436,10 @@ curl -i -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
 <span class="text-zinc-600"># Response will include headers:
 # X-Payment-Address: 0xf313dcef4e1e22c01cea636c2631c74eac6e4518
 # X-Payment-Amount: 0.05
-# X-Payment-Asset: USDT
-# X-Payment-Chain-Id: 196 (X Layer Mainnet default)
-# (Pass 'X-Network: testnet' header for Chain ID 195 fallback)</span>
+# X-Payment-Asset: USDT0
+# X-Payment-Token-Address: 0x779ded0c9e102225f8e0630b35a9b54be713736
+# X-Payment-Chain-Id: eip155:196 (X Layer Mainnet)
+# WWW-Authenticate: Payment realm="GovCoPilot", method="evm", chainId="eip155:196", token="0x779ded0c9e102225f8e0630b35a9b54be713736"</span>
 
 <span class="text-zinc-600"># 2. Re-send once you submit the tx onchain with the Tx Hash</span>
 curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \

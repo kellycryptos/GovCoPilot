@@ -28,17 +28,23 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
   }
 
   const networkConfig = getNetworkConfig(req);
-  const txHash = req.header('X-Payment-Tx-Hash') || req.header('X-Payment-Hash') || (req.body && req.body.paymentTxHash);
+  const txHash =
+    req.header('X-Payment-Tx-Hash') ||
+    req.header('X-Payment-Hash') ||
+    req.header('PAYMENT-SIGNATURE') ||
+    req.header('X-PAYMENT') ||
+    (req.body && req.body.paymentTxHash);
 
   if (!txHash) {
-    const numericChainId = parseInt(networkConfig.chainId, 10);
-    const caip2ChainId = networkConfig.caip2ChainId; // e.g. 'eip155:196'
+    const numericChainId = 196;
+    const caip2ChainId = 'eip155:196';
+    const usdtContractAddress = '0x779ded0c9e102225f8e0630b35a9b54be713736';
 
     // Build standard x402 payment offer object
     const paymentOffer = {
       x402Version: 1,
       error: 'Payment Required',
-      message: `To access GovCoPilot ASP analyze_governance_proposal tool, pay ${networkConfig.paymentAmount} ${networkConfig.paymentAsset} to ${networkConfig.aspWalletAddress} on ${networkConfig.name} (${caip2ChainId}). Include transaction hash in the 'X-Payment-Tx-Hash' header upon completion.`,
+      message: `To access GovCoPilot ASP analyze_governance_proposal tool, pay ${networkConfig.paymentAmount} ${networkConfig.paymentAsset} (${usdtContractAddress}) to ${networkConfig.aspWalletAddress} on ${networkConfig.name} (${caip2ChainId}). Include transaction hash in the 'X-Payment-Tx-Hash' header upon completion.`,
       accepts: [
         {
           scheme: 'exact',
@@ -48,7 +54,7 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
           asset: networkConfig.paymentAsset,
           payTo: networkConfig.aspWalletAddress,
           amount: networkConfig.paymentAmount,
-          tokenAddress: networkConfig.usdtContractAddress,
+          tokenAddress: usdtContractAddress,
           maxAmountRequired: networkConfig.paymentAmount,
         },
       ],
@@ -60,7 +66,7 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
         chainId: caip2ChainId,
         numericChainId: numericChainId,
         caip2: caip2ChainId,
-        tokenAddress: networkConfig.usdtContractAddress,
+        tokenAddress: usdtContractAddress,
         networkName: networkConfig.name,
       },
     };
@@ -77,11 +83,15 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
     res.setHeader('X-Payment-Chain-Id', caip2ChainId);
     res.setHeader('X-Payment-Network', caip2ChainId);
     res.setHeader('X-Payment-Asset', networkConfig.paymentAsset);
-    res.setHeader('X-Payment-Token-Address', networkConfig.usdtContractAddress);
+    res.setHeader('X-Payment-Token-Address', usdtContractAddress);
     res.setHeader('PAYMENT-REQUIRED', encodedOffer);
+    res.setHeader(
+      'WWW-Authenticate',
+      `Payment realm="GovCoPilot", method="evm", chainId="${caip2ChainId}", token="${usdtContractAddress}"`
+    );
 
     console.log(
-      `[x402] 402 Payment Required issued to ${req.ip || 'client'} for ${req.path}. Network: ${caip2ChainId}, Address: ${networkConfig.aspWalletAddress}, Fee: ${networkConfig.paymentAmount} ${networkConfig.paymentAsset}`
+      `[x402] 402 Payment Required issued to ${req.ip || 'client'} for ${req.path}. Network: ${caip2ChainId}, Token: ${usdtContractAddress}, Address: ${networkConfig.aspWalletAddress}, Fee: ${networkConfig.paymentAmount} ${networkConfig.paymentAsset}`
     );
 
     res.status(402).json(paymentOffer);

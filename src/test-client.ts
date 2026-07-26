@@ -52,8 +52,8 @@ async function runTests() {
       throw new Error(`Expected Mainnet Chain ID containing 196 or eip155:196, got ${mainnetHeaders.chainId}`);
     }
 
-    // Test 3: Gated endpoint on Testnet via X-Network header
-    console.log('\n[Test 3] Testnet Fallback x402 Probe (X-Network: testnet)...');
+    // Test 3: Enforcement of X Layer Mainnet USDT0 even with X-Network header (No testnet fallback)
+    console.log('\n[Test 3] Mainnet USDT0 Strict Enforcement Probe (X-Network: testnet attempt)...');
     const testnetRes = await fetch(`${url}/api/analyze`, {
       method: 'POST',
       headers: {
@@ -61,7 +61,7 @@ async function runTests() {
         'X-Network': 'testnet',
       },
       body: JSON.stringify({
-        proposalText: 'Test proposal for X Layer Testnet fallback.',
+        proposalText: 'Test proposal verifying Mainnet USDT0 strict enforcement.',
       }),
     });
     console.log('Status:', testnetRes.status);
@@ -70,12 +70,16 @@ async function runTests() {
       amount: testnetRes.headers.get('X-Payment-Amount'),
       chainId: testnetRes.headers.get('X-Payment-Chain-Id'),
       asset: testnetRes.headers.get('X-Payment-Asset'),
+      tokenAddress: testnetRes.headers.get('X-Payment-Token-Address'),
     };
-    console.log('Testnet x402 Headers:', testnetHeaders);
+    console.log('Mainnet Enforced x402 Headers:', testnetHeaders);
     console.log('Response:', await testnetRes.json());
 
-    if (!testnetHeaders.chainId || !testnetHeaders.chainId.includes('195')) {
-      throw new Error(`Expected Testnet Chain ID containing 195 or eip155:195, got ${testnetHeaders.chainId}`);
+    if (!testnetHeaders.chainId || !testnetHeaders.chainId.includes('196')) {
+      throw new Error(`Expected Mainnet Chain ID eip155:196, got ${testnetHeaders.chainId}`);
+    }
+    if (testnetHeaders.tokenAddress?.toLowerCase() !== '0x779ded0c9e102225f8e0630b35a9b54be713736') {
+      throw new Error(`Expected Mainnet USDT0 token 0x779ded0c9e102225f8e0630b35a9b54be713736, got ${testnetHeaders.tokenAddress}`);
     }
 
     // Test 4: Invalid Tx Hash rejection (Security Check)

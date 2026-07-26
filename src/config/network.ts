@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export interface NetworkConfig {
-  networkKey: 'mainnet' | 'testnet';
+  networkKey: 'mainnet';
   chainId: string;
   caip2ChainId: string;
   name: string;
@@ -17,6 +17,8 @@ export interface NetworkConfig {
 }
 
 const DEFAULT_ASP_ADDRESS = '0xf313dcef4e1e22c01cea636c2631c74eac6e4518';
+const USDT0_MAINNET_ADDRESS = '0x779ded0c9e102225f8e0630b35a9b54be713736';
+
 function getAspWalletAddress(): string {
   const envAddr = process.env.ASP_WALLET_ADDRESS;
   if (!envAddr || envAddr.toLowerCase() === '0xc91766bfeb093cf177936e95ff187ff7cc13fe5b') {
@@ -25,54 +27,28 @@ function getAspWalletAddress(): string {
   return envAddr;
 }
 
-export const NETWORKS: Record<'mainnet' | 'testnet', NetworkConfig> = {
-  mainnet: {
-    networkKey: 'mainnet',
-    chainId: process.env.CHAIN_ID || '196',
-    caip2ChainId: process.env.CAIP2_CHAIN_ID || 'eip155:196',
-    name: 'X Layer Mainnet',
-    rpcUrl: process.env.X_LAYER_MAINNET_RPC_URL || process.env.X_LAYER_RPC_URL || 'https://rpc.xlayer.tech',
-    explorerUrl: 'https://www.okx.com/web3/explorer/xlayer',
-    aspWalletAddress: getAspWalletAddress(),
-    usdtContractAddress: '0x779ded0c9e1022225f8e0630b35a9b54be713736',
-    paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
-    paymentAsset: 'USDT0',
-  },
-  testnet: {
-    networkKey: 'testnet',
-    chainId: '195',
-    caip2ChainId: 'eip155:195',
-    name: 'X Layer Testnet',
-    rpcUrl: process.env.X_LAYER_TESTNET_RPC_URL || 'https://xlayertestrpc.okx.com',
-    explorerUrl: 'https://www.okx.com/web3/explorer/xlayer-test',
-    aspWalletAddress: getAspWalletAddress(),
-    usdtContractAddress: '0x779ded0c9e1022225f8e0630b35a9b54be713736',
-    paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
-    paymentAsset: 'USDT0',
-  },
+export const MAINNET_CONFIG: NetworkConfig = {
+  networkKey: 'mainnet',
+  chainId: '196',
+  caip2ChainId: 'eip155:196',
+  name: 'X Layer Mainnet',
+  rpcUrl: process.env.X_LAYER_MAINNET_RPC_URL || process.env.X_LAYER_RPC_URL || 'https://rpc.xlayer.tech',
+  explorerUrl: 'https://www.okx.com/web3/explorer/xlayer',
+  aspWalletAddress: getAspWalletAddress(),
+  usdtContractAddress: USDT0_MAINNET_ADDRESS,
+  paymentAmount: process.env.PAYMENT_AMOUNT || '0.05',
+  paymentAsset: 'USDT0',
 };
 
-export function getActiveNetworkKey(req?: Request): 'mainnet' | 'testnet' {
-  if (req) {
-    const headerNet = req.header('X-Network')?.toLowerCase();
-    if (headerNet === 'testnet' || headerNet === 'mainnet') {
-      return headerNet;
-    }
-    const queryNet = (req.query?.network as string)?.toLowerCase();
-    if (queryNet === 'testnet' || queryNet === 'mainnet') {
-      return queryNet;
-    }
-  }
+export const NETWORKS: Record<string, NetworkConfig> = {
+  mainnet: MAINNET_CONFIG,
+  testnet: MAINNET_CONFIG, // Forced to Mainnet config (testnet fallback disabled)
+};
 
-  const envNet = process.env.NETWORK?.toLowerCase();
-  if (envNet === 'testnet') {
-    return 'testnet';
-  }
-
+export function getActiveNetworkKey(_req?: Request): 'mainnet' {
   return 'mainnet';
 }
 
-export function getNetworkConfig(req?: Request): NetworkConfig {
-  const key = getActiveNetworkKey(req);
-  return NETWORKS[key];
+export function getNetworkConfig(_req?: Request): NetworkConfig {
+  return MAINNET_CONFIG;
 }

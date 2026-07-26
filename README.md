@@ -4,9 +4,9 @@
 
 GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns structured, machine-readable recommendations: strategic alignment, financial impact, security risk assessment, a confidence-scored voting recommendation, and ready-to-execute EVM calldata — all via a single x402-paid API call.
 
-Built for the agent-to-agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's endpoint, pays per-call in testnet/mainnet tokens (e.g. USDT0 on X Layer) via x402, and receives back everything it needs to make and execute a governance decision autonomously — no negotiation, no human in the loop.
+Built for the agent-to-agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's endpoint, pays per-call in USDT0 on X Layer Mainnet (`0x779ded0c9e102225f8e0630b35a9b54be713736`) via x402, and receives back everything it needs to make and execute a governance decision autonomously — no negotiation, no human in the loop.
 
-GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platform with 900+ real proposals on Arc Testnet, and is optimized for X Layer's fast finality and low fees, with native OKX Agentic Wallet, OKX.AI, and Onchain OS integration.
+GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platform with 900+ real proposals, and is optimized for X Layer's fast finality and low fees, with native OKX Agentic Wallet, OKX.AI, and Onchain OS integration.
 
 ---
 
@@ -14,13 +14,14 @@ GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platfor
 
 - **HTTP x402 Compliance (OKX.AI Listing Ready):** 
   - Standard `402 Payment Required` status response.
-  - Advertises CAIP-2 formatted chain ID **`eip155:196`** for X Layer Mainnet (`eip155:195` for Testnet) across headers (`X-Payment-Chain-Id`, `X-Payment-Network`) and response payload.
+  - Advertises CAIP-2 formatted chain ID **`eip155:196`** for X Layer Mainnet across headers (`X-Payment-Chain-Id`, `X-Payment-Network`, `WWW-Authenticate`) and response payload.
   - Returns base64-encoded `PAYMENT-REQUIRED` header for x402 v2 protocol compatibility.
+  - Hardcodes payment token to Mainnet **USDT0 (`0x779ded0c9e102225f8e0630b35a9b54be713736`)** on X Layer Mainnet (`eip155:196`).
   - Full CORS header exposure (`Access-Control-Expose-Headers`) for cross-origin crawlers and web clients.
 - **On-Chain Transaction Verification:** Interacts directly with X Layer RPC nodes to verify broadcasted transactions across direct native transfers, ERC20 transfers (e.g., USDT0), and Account Abstraction (AA) userOps.
 - **Replay Attack Protection:** Tracks verified transaction hashes in middleware to prevent transaction replay reuse.
 - **LLM Reasoning Engine:** Powered by Groq AI with enforced JSON output schema for deterministic machine parsing.
-- **Multi-Network Support:** Defaults to X Layer Mainnet (`eip155:196`), with seamless fallback to X Layer Testnet (`eip155:195`) via `X-Network: testnet` header or query string.
+- **Strict Mainnet Enforcement:** Uses X Layer Mainnet (`eip155:196`) and USDT0 token exclusively for all x402 payment challenges.
 - **Zero-Friction Playground:** Built-in `X-Playground-Request` header bypass for developers and hackathon judges to evaluate without broadcasting live transactions.
 
 ---
@@ -46,14 +47,14 @@ GovCoPilot gives any agent a single, paid, standardized endpoint to solve all th
 
 ## Network & Deployment Details
 
-| Field | Mainnet (Default) | Testnet |
-|---|---|---|
-| **Network** | X Layer Mainnet | X Layer Testnet |
-| **Chain ID (CAIP-2)** | `eip155:196` (Numeric: `196`) | `eip155:195` (Numeric: `195`) |
-| **RPC URL** | `https://rpc.xlayer.tech` | `https://xlayertestrpc.okx.com` |
-| **Explorer** | [X Layer Mainnet Explorer](https://www.okx.com/web3/explorer/xlayer) | [X Layer Testnet Explorer](https://www.okx.com/web3/explorer/xlayer-test) |
-| **Payment Address (ASP Wallet)** | `0xf313dcef4e1e22c01cea636c2631c74eac6e4518` | `0xf313dcef4e1e22c01cea636c2631c74eac6e4518` |
-| **Payment Asset & Fee** | 0.05 USDT0 (`0x779d...7336`) | 0.05 USDT0 / Native OKB |
+| Field | Mainnet |
+|---|---|
+| **Network** | X Layer Mainnet |
+| **Chain ID (CAIP-2)** | `eip155:196` (Numeric: `196`) |
+| **RPC URL** | `https://rpc.xlayer.tech` |
+| **Explorer** | [X Layer Mainnet Explorer](https://www.okx.com/web3/explorer/xlayer) |
+| **Payment Address (ASP Wallet)** | `0xf313dcef4e1e22c01cea636c2631c74eac6e4518` |
+| **Payment Asset & Token Address** | 0.05 USDT0 (`0x779ded0c9e102225f8e0630b35a9b54be713736`) |
 
 ---
 
@@ -63,13 +64,13 @@ GovCoPilot gives any agent a single, paid, standardized endpoint to solve all th
 
 **Required header (after payment):** `X-Payment-Tx-Hash`
 
-**Optional headers:** `X-Network: testnet` (select testnet), `X-Playground-Request: true` (bypass payment for testing)
+**Optional headers:** `X-Playground-Request: true` (bypass payment for testing/playground)
 
 ### x402 Flow
 
 1. Call the endpoint without a transaction hash header.
 2. Receive `402 Payment Required` with payment coordinates in headers and JSON payload.
-3. Broadcast payment on X Layer (USDT0 / OKB) to the ASP wallet address.
+3. Broadcast 0.05 USDT0 payment on X Layer Mainnet (`0x779ded0c9e102225f8e0630b35a9b54be713736`) to the ASP wallet address.
 4. Retry the request including the transaction hash in the `X-Payment-Tx-Hash` header.
 
 ### 402 Probe Response Headers & Payload
@@ -83,8 +84,9 @@ X-Payment-Amount: 0.05
 X-Payment-Chain-Id: eip155:196
 X-Payment-Network: eip155:196
 X-Payment-Asset: USDT0
-X-Payment-Token-Address: 0x779ded0c9e1022225f8e0630b35a9b54be713736
+X-Payment-Token-Address: 0x779ded0c9e102225f8e0630b35a9b54be713736
 PAYMENT-REQUIRED: <base64-encoded x402 offer>
+WWW-Authenticate: Payment realm="GovCoPilot", method="evm", chainId="eip155:196", token="0x779ded0c9e102225f8e0630b35a9b54be713736"
 ```
 
 **JSON Payload:**
@@ -174,8 +176,9 @@ The live playground bypasses payment for judges/testers via an internal `X-Playg
 See `.env.example` for required variables:
 
 - `ASP_WALLET_ADDRESS` — ASP wallet receiving payments (`0xf313dcef4e1e22c01cea636c2631c74eac6e4518`)
-- `CHAIN_ID` — `196` (Mainnet) or `195` (Testnet)
-- `CAIP2_CHAIN_ID` — `eip155:196` (Mainnet) or `eip155:195` (Testnet)
+- `CHAIN_ID` — `196` (X Layer Mainnet)
+- `CAIP2_CHAIN_ID` — `eip155:196` (X Layer Mainnet)
+- `PAYMENT_TOKEN_ADDRESS` — `0x779ded0c9e102225f8e0630b35a9b54be713736` (USDT0 on X Layer Mainnet)
 - `GROQ_API_KEY` — server-side AI key (never exposed to client)
 - `GROQ_MODEL` — optional server-side Groq model override
 
@@ -184,7 +187,7 @@ See `.env.example` for required variables:
 ## Status & Ecosystem Integration
 
 - Fully x402-compliant ASP listed / ready for OKX.AI approval via Onchain OS and OKX Agentic Wallet.
-- Deployed and live on X Layer Mainnet (`eip155:196`) & Testnet (`eip155:195`).
+- Deployed and live on X Layer Mainnet (`eip155:196`) using Mainnet USDT0 (`0x779ded0c9e102225f8e0630b35a9b54be713736`).
 - Developed by the team behind SynArc.
 
 ---
