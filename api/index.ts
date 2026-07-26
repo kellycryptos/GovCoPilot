@@ -76,17 +76,10 @@ app.get('/health', (req, res) => {
 // REST API endpoint for proposal analysis (protected by x402 payment middleware)
 app.post(['/api/analyze', '/api/analyze_governance_proposal'], x402Middleware, async (req, res) => {
   try {
-    const isSampling =
-      req.header('X-OKX-Sampling') === 'true' ||
-      req.header('X-Sampling-Request') === 'true' ||
-      req.header('X-OKX-Test') === 'true' ||
-      Boolean(req.header('X-OKX-Test-Wallet')) ||
-      Boolean(req.header('X-OKX-Agent-Id'));
-
     const { proposalText, proposalTitle, chain, daoContext, treasurySnapshot } = req.body || {};
 
     console.log(
-      `[GovCoPilot API] Incoming analysis request for "${proposalTitle || 'Untitled Proposal'}" (Length: ${proposalText?.length || 0} chars, Sampling: ${isSampling}, IP: ${req.ip || 'unknown'})`
+      `[GovCoPilot API] Incoming analysis request for "${proposalTitle || 'Untitled Proposal'}" (Length: ${proposalText?.length || 0} chars, IP: ${req.ip || 'unknown'})`
     );
 
     if (!proposalText) {

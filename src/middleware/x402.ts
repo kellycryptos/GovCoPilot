@@ -246,25 +246,10 @@ function detectPaymentFormat(raw: string): 'eip3009' | 'txhash' | 'unknown' {
 // Main middleware
 // ---------------------------------------------------------------------------
 export async function x402Middleware(req: Request, res: Response, next: NextFunction): Promise<void> {
-  // ── Bypass conditions ────────────────────────────────────────────────────
-  const isPlayground = req.header('X-Playground-Request') === 'true';
-  const isOkxSampling =
-    req.header('X-OKX-Sampling') === 'true' ||
-    req.header('X-Sampling-Request') === 'true' ||
-    req.header('X-OKX-Test') === 'true' ||
-    Boolean(req.header('X-OKX-Test-Wallet')) ||
-    Boolean(req.header('X-OKX-Agent-Id')) ||
-    (req.header('User-Agent')?.toLowerCase().includes('okx-sampling') ?? false);
-
-  const bypass = process.env.BYPASS_PAYMENT_VERIFICATION === 'true' || isPlayground || isOkxSampling;
+  // ── Development bypass condition (env variable only) ──────────────────────
+  const bypass = process.env.BYPASS_PAYMENT_VERIFICATION === 'true';
   if (bypass) {
-    if (isOkxSampling) {
-      console.log(
-        `[OKX-Sampling] Free sampling call (IP: ${req.ip || 'unknown'}, UA: ${req.header('User-Agent') || 'N/A'}, Agent-Id: ${req.header('X-OKX-Agent-Id') || 'N/A'}).`
-      );
-    } else {
-      console.log(`[x402] Payment bypass: ${req.method} ${req.path} (Playground: ${isPlayground}).`);
-    }
+    console.log(`[x402] Dev payment bypass active for ${req.method} ${req.path}`);
     return next();
   }
 
