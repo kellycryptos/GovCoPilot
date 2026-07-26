@@ -115,6 +115,25 @@ async function runTests() {
     const playgroundData = await playgroundRes.json();
     console.log('Playground Analysis Title:', playgroundData.proposalTitle || playgroundData.recommendation);
 
+    // Test 6: Alternative x402 header parsing (base64 encoded PAYMENT-SIGNATURE payload)
+    console.log('\n[Test 6] Parsing base64-encoded PAYMENT-SIGNATURE header...');
+    const payload = Buffer.from(JSON.stringify({ txHash: '0x0000000000000000000000000000000000000000000000000000000000000000' })).toString('base64');
+    const signatureHeaderRes = await fetch(`${url}/api/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'PAYMENT-SIGNATURE': payload,
+      },
+      body: JSON.stringify({
+        proposalText: 'Proposal with base64 PAYMENT-SIGNATURE header.',
+      }),
+    });
+    console.log('Status:', signatureHeaderRes.status);
+    console.log('Response:', await signatureHeaderRes.json());
+    if (signatureHeaderRes.status !== 400) {
+      throw new Error(`Expected status 400 (invalid tx lookup), got ${signatureHeaderRes.status}`);
+    }
+
     console.log('\nAll integration tests passed successfully!');
   } catch (error) {
     console.error('Test execution failed:', error);

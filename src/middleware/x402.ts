@@ -28,12 +28,37 @@ export async function x402Middleware(req: Request, res: Response, next: NextFunc
   }
 
   const networkConfig = getNetworkConfig(req);
-  const txHash =
+  let txHash =
     req.header('X-Payment-Tx-Hash') ||
     req.header('X-Payment-Hash') ||
     req.header('PAYMENT-SIGNATURE') ||
     req.header('X-PAYMENT') ||
     (req.body && req.body.paymentTxHash);
+
+  if (!txHash) {
+    const authHeader = req.header('Authorization');
+    if (authHeader) {
+      const parts = authHeader.trim().split(/\s+/);
+      if (parts.length === 2 && (parts[0].toLowerCase() === 'bearer' || parts[0].toLowerCase() === 'payment')) {
+        txHash = parts[1];
+      } else {
+        txHash = authHeader;
+      }
+    }
+  }
+
+  // If txHash is base64 encoded (e.g., from X-PAYMENT or PAYMENT-SIGNATURE payload)
+  if (txHash && !txHash.startsWith('0x')) {
+    try {
+      const decodedStr = Buffer.from(txHash, 'base64').toString('utf-8');
+      if (decodedStr.startsWith('{')) {
+        const parsed = JSON.parse(decodedStr);
+        txHash = parsed.txHash || parsed.transactionHash || parsed.hash || parsed.tx_hash || parsed.signature || txHash;
+      }
+    } catch {
+      // Keep original txHash string if decoding fails
+    }
+  }
 
   if (!txHash) {
     const numericChainId = 196;

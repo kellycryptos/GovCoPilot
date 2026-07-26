@@ -25,6 +25,11 @@ app.use(
       'X-Playground-Request',
       'PAYMENT-SIGNATURE',
       'X-PAYMENT',
+      'X-OKX-Sampling',
+      'X-Sampling-Request',
+      'X-OKX-Test',
+      'X-OKX-Test-Wallet',
+      'X-OKX-Agent-Id',
     ],
     exposedHeaders: [
       'X-Payment-Address',
