@@ -74,8 +74,16 @@ app.get('/health', (req, res) => {
 });
 
 // REST API endpoint for proposal analysis (protected by x402 payment middleware)
-app.post(['/api/analyze', '/api/analyze_governance_proposal'], x402Middleware, async (req, res) => {
+app.all(['/api/analyze', '/api/analyze_governance_proposal'], x402Middleware, async (req, res) => {
   try {
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      res.json({
+        status: 'active',
+        service: 'GovCoPilot Proposal Analyzer',
+        x402Compliant: true,
+      });
+      return;
+    }
     const { proposalText, proposalTitle, chain, daoContext, treasurySnapshot } = req.body || {};
 
     console.log(
