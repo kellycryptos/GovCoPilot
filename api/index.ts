@@ -45,6 +45,18 @@ app.use(
 );
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Express JSON error handler - prevent HTML error responses
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err) {
+    console.error('[API JSON Error]', err.message);
+    res.status(400).json({ error: 'Bad Request', message: err.message || 'Invalid payload' });
+    return;
+  }
+  next();
+});
+
 app.use(express.static('public'));
 
 // Explicitly serve landing page at root route

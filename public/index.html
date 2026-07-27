@@ -511,7 +511,14 @@ curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
           })
         });
 
-        const data = await response.json();
+        const rawText = await response.text();
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch (e) {
+          data = { rawResponse: rawText };
+        }
+
         spinner.classList.add('hidden');
         btnAnalyze.disabled = false;
 
