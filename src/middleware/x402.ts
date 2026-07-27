@@ -97,18 +97,18 @@ async function verifyEip3009Payment(
     };
   }
 
-  // Amount must meet or exceed our minimum
-  const required = BigInt(networkConfig.paymentAmountMinimalUnits);
+  // Amount must meet or exceed minimum service price (0.02 USDT = 20000 minimal units)
+  const minServicePrice = BigInt(process.env.MIN_SERVICE_PRICE_UNITS || '20000');
   let provided: bigint;
   try {
     provided = BigInt(value);
   } catch {
     return { valid: false, reason: `Invalid value field: ${value}` };
   }
-  if (provided < required) {
+  if (provided < minServicePrice) {
     return {
       valid: false,
-      reason: `Insufficient payment. Required: ${required} minimal units, provided: ${provided}`,
+      reason: `Insufficient payment. Required minimum: ${minServicePrice} minimal units, provided: ${provided}`,
     };
   }
 
