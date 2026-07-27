@@ -2,6 +2,8 @@
 
 **Autonomous DAO Governance Co-Pilot, built on X Layer**
 
+✅ **Listed and live on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
+
 GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns structured, machine-readable recommendations: strategic alignment, financial impact, security risk assessment, a confidence-scored voting recommendation, and ready-to-execute EVM calldata — all via a single x402-paid API call.
 
 Built for the agent-to-agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's endpoint, pays per-call in USDT0 on X Layer Mainnet (`0x779ded0c9e102225f8e0630b35a9b54be713736`) via x402, and receives back everything it needs to make and execute a governance decision autonomously — no negotiation, no human in the loop.
@@ -40,6 +42,7 @@ GovCoPilot gives any agent a single, paid, standardized endpoint to solve all th
 
 ## Live Demo & Resources
 
+- **OKX.AI Listing:** https://www.okx.ai/agents/5965 (Agent ID 5965 — publicly listed and callable)
 - **Playground:** https://gov-copilot.vercel.app/#playground (payment bypassed for testing — see below)
 - **GitHub:** https://github.com/kellycryptos/GovCoPilot
 - **X (Twitter):** https://x.com/govcopilot
@@ -60,6 +63,8 @@ GovCoPilot gives any agent a single, paid, standardized endpoint to solve all th
 ---
 
 ## API Reference & x402 Protocol Specification
+
+> This endpoint is publicly listed and directly callable via OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965). It is the same endpoint registered on OKX.AI, not just a locally tested instance.
 
 **Endpoints:** `POST /api/analyze_governance_proposal` or `POST /api/analyze`
 
@@ -187,7 +192,8 @@ See `.env.example` for required variables:
 
 ## Status & Ecosystem Integration
 
-- Fully x402-compliant ASP listed / ready for OKX.AI approval via Onchain OS and OKX Agentic Wallet.
+- ✅ **Listed and live on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
+- Fully x402-compliant ASP, approved and publicly accessible via Onchain OS and OKX Agentic Wallet.
 - Deployed and live on X Layer Mainnet (`eip155:196`) using Mainnet USDT0 (`0x779ded0c9e102225f8e0630b35a9b54be713736`).
 - Developed by the team behind SynArc.
 
