@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { analyzeProposal } from '../src/services/analyzer.js';
-import { x402Middleware } from '../src/middleware/x402.js';
+import { x402OkxMiddleware } from '../src/middleware/x402-okx.js';
 import { getNetworkConfig } from '../src/config/network.js';
 
 dotenv.config();
@@ -73,8 +73,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// REST API endpoint for proposal analysis (protected by x402 payment middleware)
-app.all(['/api/analyze', '/api/analyze_governance_proposal', '/api/deliverable'], x402Middleware, async (req, res) => {
+// REST API endpoint for proposal analysis (protected by official @okxweb3/x402-express SDK middleware)
+app.all(['/api/analyze', '/api/analyze_governance_proposal', '/api/deliverable'], x402OkxMiddleware, async (req, res) => {
   try {
     const body = req.body || {};
     const query = req.query || {};
