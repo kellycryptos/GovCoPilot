@@ -6,7 +6,7 @@ dotenv.config();
 
 
 export interface ProposalInput {
-  proposalText: string;
+  proposalText?: string;
   proposalTitle?: string;
   chain?: string;
   daoContext?: string;
