@@ -74,26 +74,25 @@ app.get('/health', (req, res) => {
 });
 
 // REST API endpoint for proposal analysis (protected by x402 payment middleware)
-app.all(['/api/analyze', '/api/analyze_governance_proposal'], x402Middleware, async (req, res) => {
+app.all(['/api/analyze', '/api/analyze_governance_proposal', '/api/deliverable'], x402Middleware, async (req, res) => {
   try {
-    if (req.method === 'GET' || req.method === 'HEAD') {
-      res.json({
-        status: 'active',
-        service: 'GovCoPilot Proposal Analyzer',
-        x402Compliant: true,
-      });
-      return;
+    const body = req.body || {};
+    const query = req.query || {};
+
+    let proposalTitle = body.proposalTitle || query.proposalTitle || body.title || query.title || 'DAO Governance Proposal';
+    let proposalText = body.proposalText || query.proposalText || body.taskDescription || query.taskDescription || body.description || query.description || '';
+    const chain = body.chain || query.chain || 'ethereum';
+    const daoContext = body.daoContext || query.daoContext || 'DeFi Protocol DAO';
+    const treasurySnapshot = body.treasurySnapshot || query.treasurySnapshot;
+
+    // Fallback: If proposalText is empty, generate from title/context (handles direct-accept without client body)
+    if (!proposalText || proposalText.trim().length === 0) {
+      proposalText = `Governance Proposal: ${proposalTitle}. This proposal seeks DAO community approval and voting evaluation for protocol treasury management, security parameter adjustments, or strategic ecosystem initiatives under ${daoContext} on ${chain}.`;
     }
-    const { proposalText, proposalTitle, chain, daoContext, treasurySnapshot } = req.body || {};
 
     console.log(
-      `[GovCoPilot API] Incoming analysis request for "${proposalTitle || 'Untitled Proposal'}" (Length: ${proposalText?.length || 0} chars, IP: ${req.ip || 'unknown'})`
+      `[GovCoPilot API] Executing analysis for "${proposalTitle}" (Length: ${proposalText.length} chars, Method: ${req.method}, IP: ${req.ip || 'unknown'})`
     );
-
-    if (!proposalText) {
-      res.status(400).json({ error: 'Missing required field: proposalText' });
-      return;
-    }
 
     const result = await analyzeProposal({
       proposalText,
