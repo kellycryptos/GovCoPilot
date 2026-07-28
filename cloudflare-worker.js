@@ -26,6 +26,7 @@ export default {
     const proxyUrl = new URL(url.pathname + url.search, UPSTREAM_URL);
 
     const headers = new Headers(request.headers);
+    headers.set('X-Forwarded-Host', url.host);
     headers.set('Host', new URL(UPSTREAM_URL).host);
 
     const init = {
