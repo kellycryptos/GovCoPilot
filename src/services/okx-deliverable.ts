@@ -18,11 +18,16 @@ export interface DeliverableRecord {
     reasoning: string;
   };
   proposalSummary: string;
-  keyInsights: string[];
-  riskAssessment: {
-    overallRisk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-    score: number;
-    categories: any[];
+  analysis: {
+    strategicAlignment: string;
+    financialImpact: string;
+    securityRisks: string;
+    opportunities: string;
+  };
+  executionGuidance: {
+    steps: string[];
+    xLayerOptimizations?: string;
+    calldataHint?: string;
   };
   timestamp: string;
   status: 'SUBMITTED' | 'ACCEPTED' | 'COMPLETED';
@@ -57,14 +62,15 @@ export function saveDeliverable(record: DeliverableRecord): DeliverableRecord {
 
   fs.writeFileSync(DELIVERABLES_FILE, JSON.stringify(list, null, 2), 'utf8');
 
-  // Also write an individual json file per jobId for CLI deliverable compatibility
+  // Write individual json file per jobId for CLI deliverable compatibility
   const jobFile = path.join(DELIVERABLES_DIR, `deliverable_${record.jobId}.json`);
   fs.writeFileSync(jobFile, JSON.stringify(record, null, 2), 'utf8');
 
   // Try calling onchainos task-deliverable-save in background
   try {
     const shortId = record.jobId.slice(0, 10);
-    const cmd = `onchainos agent task-deliverable-save --job-id "${record.jobId}" --role asp --file "${jobFile}" --title "${record.proposalTitle.slice(0, 30)}" --short-id "${shortId}"`;
+    const titleClean = (record.proposalTitle || 'Proposal').replace(/"/g, "'").slice(0, 30);
+    const cmd = `onchainos agent task-deliverable-save --job-id "${record.jobId}" --role asp --file "${jobFile}" --title "${titleClean}" --short-id "${shortId}"`;
     exec(cmd, (err) => {
       if (err) {
         console.warn(`[OKX Deliverable Save Warning] Could not register with onchainos CLI: ${err.message}`);

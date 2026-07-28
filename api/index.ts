@@ -183,8 +183,8 @@ app.all(['/api/analyze', '/api/analyze_governance_proposal'], x402Middleware, as
       proposalText: proposalText,
       votingRecommendation: result.votingRecommendation,
       proposalSummary: result.proposalSummary,
-      keyInsights: result.keyInsights,
-      riskAssessment: result.riskAssessment,
+      analysis: result.analysis,
+      executionGuidance: result.executionGuidance,
       timestamp: new Date().toISOString(),
       status: 'SUBMITTED',
     });
