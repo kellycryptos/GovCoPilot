@@ -439,7 +439,7 @@ Steps:
           <div class="p-6">
             <pre class="text-xs code-font text-zinc-400 overflow-x-auto leading-relaxed">
 <span class="text-zinc-600"># 1. Probe the endpoint to get payment coordinates</span>
-curl -i -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
+curl -i -X POST https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposal \
   -H "Content-Type: application/json" \
   -d '{"proposalText": "Upgrade main governance contract"}'
 
@@ -452,7 +452,7 @@ curl -i -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
 # WWW-Authenticate: Payment realm="GovCoPilot", method="evm", chainId="eip155:196", token="0x779ded0c9e102225f8e0630b35a9b54be713736"</span>
 
 <span class="text-zinc-600"># 2. Re-send once you submit the tx onchain with the Tx Hash</span>
-curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
+curl -X POST https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposal \
   -H "Content-Type: application/json" \
   -H "X-Payment-Tx-Hash: 0x8ef439b1e...your_tx_hash..." \
   -d '{"proposalText": "Upgrade main governance contract", "chain": "x-layer"}'</pre>

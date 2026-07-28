@@ -1,155 +1,102 @@
 # GovCoPilot
 
-**Autonomous DAO Governance Co-Pilot, built on X Layer**
+**Autonomous DAO Governance Co-Pilot on X Layer Mainnet**
 
-✅ **Listed and live on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
+✅ **Listed and Live on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
 
-GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns structured, machine-readable recommendations: strategic alignment, financial impact, security risk assessment, a confidence-scored voting recommendation, and ready-to-execute EVM calldata — all via a single x402-paid API call.
+GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns structured, machine-readable recommendations: strategic alignment, financial impact, security risk assessment, a confidence-scored voting recommendation, and ready-to-execute EVM calldata — via x402-paid API calls and Onchain OS agent task marketplace integration.
 
-Built for the agent-to-agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's endpoint, pays per-call in USDT0 on X Layer Mainnet (`0x779ded0c9e102225f8e0630b35a9b54be713736`) via x402, and receives back everything it needs to make and execute a governance decision autonomously — no negotiation, no human in the loop.
+Built for the autonomous agent economy: instead of a human reading proposal documentation, an AI agent calls GovCoPilot's production endpoint (`https://govcopilot-api.synarcdao.xyz`), pays per-call in USDT0 on X Layer Mainnet (`0x779ded0c9e1022225f8e0630b35a9b54be713736`) via x402, and receives everything needed to execute governance decisions autonomously — zero human in the loop.
 
-GovCoPilot is built on infrastructure proven by SynArc, a DAO governance platform with 900+ real proposals, and is optimized for X Layer's fast finality and low fees, with native OKX Agentic Wallet, OKX.AI, and Onchain OS integration.
-
----
-
-## Key Technical & Architectural Highlights
-
-- **HTTP x402 Compliance (OKX.AI Listing Ready):** 
-  - Standard `402 Payment Required` status response.
-  - Advertises CAIP-2 formatted chain ID **`eip155:196`** for X Layer Mainnet across headers (`X-Payment-Chain-Id`, `X-Payment-Network`, `WWW-Authenticate`) and response payload.
-  - Returns base64-encoded `PAYMENT-REQUIRED` header for x402 v2 protocol compatibility.
-  - Hardcodes payment token to Mainnet **USDT0 (`0x779ded0c9e102225f8e0630b35a9b54be713736`)** on X Layer Mainnet (`eip155:196`).
-  - Full CORS header exposure (`Access-Control-Expose-Headers`) for cross-origin crawlers and web clients.
-- **On-Chain Transaction Verification:** Interacts directly with X Layer RPC nodes to verify broadcasted transactions across direct native transfers, ERC20 transfers (e.g., USDT0), and Account Abstraction (AA) userOps.
-- **Replay Attack Protection:** Tracks verified transaction hashes in middleware to prevent transaction replay reuse.
-- **LLM Reasoning Engine:** Powered by Groq AI with enforced JSON output schema for deterministic machine parsing.
-- **Strict Mainnet Enforcement:** Uses X Layer Mainnet (`eip155:196`) and USDT0 token exclusively for all x402 payment challenges.
-- **Zero-Friction Playground:** Built-in `X-Playground-Request` header bypass for developers and hackathon judges to evaluate without broadcasting live transactions.
+GovCoPilot is built by the team behind SynArc, leveraging governance data models from 900+ DAO proposals, and optimized for X Layer's fast finality and low transaction fees.
 
 ---
 
-## The Problem
+## 🌐 Live Production Deployment
 
-DAO governance today is broken for both humans and agents:
-
-- **Governance fatigue** — reviewing hundreds of pages of proposal documentation per vote leads to low turnout and unvetted decisions.
-- **Treasury security risk** — malicious proposals can drain funds via obfuscated router updates or contract upgrades.
-- **No agent-native tooling** — AI agents have no standardized way to analyze a proposal and generate an executable transaction.
-
-GovCoPilot gives any agent a single, paid, standardized endpoint to solve all three.
-
----
-
-## Live Demo & Resources
-
-- **OKX.AI Listing:** https://www.okx.ai/agents/5965 (Agent ID 5965 — publicly listed and callable)
-- **Playground:** https://gov-copilot.vercel.app/#playground (payment bypassed for testing — see below)
-- **GitHub:** https://github.com/kellycryptos/GovCoPilot
-- **X (Twitter):** https://x.com/govcopilot
-
----
-
-## Network & Deployment Details
-
-| Field | Mainnet |
+| Parameter | Mainnet Value |
 |---|---|
+| **Production Endpoint** | `https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposal` |
+| **Health Check Proof** | `https://govcopilot-api.synarcdao.xyz/health` |
+| **OKX.AI Listing** | [Agent ID 5965](https://www.okx.ai/agents/5965) |
 | **Network** | X Layer Mainnet |
 | **Chain ID (CAIP-2)** | `eip155:196` (Numeric: `196`) |
 | **RPC URL** | `https://rpc.xlayer.tech` |
-| **Explorer** | [X Layer Mainnet Explorer](https://www.okx.com/web3/explorer/xlayer) |
-| **Payment Address (ASP Wallet)** | `0xf313dcef4e1e22c01cea636c2631c74eac6e4518` |
-| **Payment Asset & Token Address** | 0.05 USDT0 (`0x779ded0c9e102225f8e0630b35a9b54be713736`) |
+| **ASP Wallet Address** | `0xf313dcef4e1e22c01cea636c2631c74eac6e4518` |
+| **Payment Asset & Token Address** | `0.05 USDT0` (`0x779ded0c9e1022225f8e0630b35a9b54be713736`) |
+
+---
+
+## 🏗️ Architecture Decisions & Edge Infrastructure
+
+### Why Cloudflare Edge Workers over Vercel?
+During OKX Agentic Wallet security testing, requests routed through generic Vercel subdomains were flagged by buyer-policy CDN security rules. To guarantee 100% unblocked, low-latency execution across all security probes:
+- GovCoPilot API is deployed directly to **Cloudflare Edge Infrastructure** on `govcopilot-api.synarcdao.xyz`.
+- Cloudflare Edge terminates SSL with dedicated TLS certificates and routes traffic directly to the Worker backend without CDN policy blocks.
+
+### Dual-Mode Architecture: A2MCP + A2A Support
+
+GovCoPilot natively supports both OKX payment and delivery models:
+
+1. **A2MCP Mode (Instant Pay-Per-Call)**:
+   - Client sends POST request → receives HTTP 402 challenge header with `extra: { name: "USD₮0", version: "1" }`.
+   - Client replays request with signed EIP-3009/Permit2 authorization (`PAYMENT-SIGNATURE` or `X-PAYMENT`).
+   - GovCoPilot validates authorization and synchronously returns the full JSON analysis payload with HTTP 200 OK.
+
+2. **A2A / Direct-Accept Task Mode (Task Description Retrieval & Deliverable Polling)**:
+   - When a buyer accepts/pays a task via `direct-accept` without submitting a client-side POST body, GovCoPilot automatically fetches the buyer's original task description via OKX CLI `onchainos agent common context <jobId>`.
+   - GovCoPilot processes the task description, persists the deliverable (`os.tmpdir()` + in-memory store), and registers it with `onchainos agent task-deliverable-save`.
+   - The analysis result is queryable via `GET /api/deliverable/:jobId` or OKX CLI `onchainos agent task-deliverable-list --job-id <jobId>`.
+
+---
+
+## Key Technical & Protocol Highlights
+
+- **HTTP x402 V2 Protocol Compliance:**
+  - Standard `402 Payment Required` status response.
+  - CAIP-2 chain identifier **`eip155:196`** across headers (`X-Payment-Chain-Id`, `X-Payment-Network`, `WWW-Authenticate`) and response payload.
+  - Base64-encoded `PAYMENT-REQUIRED` header with `extra: { name: "USD₮0", version: "1" }` for OKX validator compatibility.
+  - Payment asset hardcoded to Mainnet **USDT0 (`0x779ded0c9e1022225f8e0630b35a9b54be713736`)**.
+  - CORS headers exposed (`Access-Control-Expose-Headers`) for cross-origin callers.
+- **On-Chain EIP-3009 & Tx Verification:** Interacts directly with X Layer Mainnet RPC to verify EIP-3009 authorization signatures and on-chain ERC20 transfers.
+- **Replay Attack Protection:** Tracks EIP-3009 nonces and transaction hashes in middleware to prevent replay reuse.
+- **LLM Reasoning Engine:** Powered by Groq AI (`llama-3.3-70b-versatile`) with enforced JSON output schema for machine parsing.
 
 ---
 
 ## API Reference & x402 Protocol Specification
 
-> This endpoint is publicly listed and directly callable via OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965). It is the same endpoint registered on OKX.AI, not just a locally tested instance.
-
-**Endpoints:** `POST /api/analyze_governance_proposal` or `POST /api/analyze`
-
-**Required header (after payment):** `X-Payment-Tx-Hash`
-
-**Optional headers:** `X-Playground-Request: true` (bypass payment for testing/playground)
+**Endpoint:** `POST https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposal`
 
 ### x402 Flow
 
-1. Call the endpoint without a transaction hash header.
+1. Probe the endpoint without payment headers.
 2. Receive `402 Payment Required` with payment coordinates in headers and JSON payload.
-3. Broadcast 0.05 USDT0 payment on X Layer Mainnet (`0x779ded0c9e102225f8e0630b35a9b54be713736`) to the ASP wallet address.
-4. Retry the request including the transaction hash in the `X-Payment-Tx-Hash` header.
-
-### 402 Probe Response Headers & Payload
-
-**HTTP Status:** `402 Payment Required`
-
-**Headers Exposed:**
-```http
-X-Payment-Address: 0xf313dcef4e1e22c01cea636c2631c74eac6e4518
-X-Payment-Amount: 0.05
-X-Payment-Chain-Id: eip155:196
-X-Payment-Network: eip155:196
-X-Payment-Asset: USDT0
-X-Payment-Token-Address: 0x779ded0c9e102225f8e0630b35a9b54be713736
-PAYMENT-REQUIRED: <base64-encoded x402 offer>
-WWW-Authenticate: Payment realm="GovCoPilot", method="evm", chainId="eip155:196", token="0x779ded0c9e102225f8e0630b35a9b54be713736"
-```
-
-**JSON Payload:**
-```json
-{
-  "x402Version": 1,
-  "error": "Payment Required",
-  "message": "To access GovCoPilot ASP analyze_governance_proposal tool, pay 0.05 USDT0 to 0xf313dcef4e1e22c01cea636c2631c74eac6e4518 on X Layer Mainnet (eip155:196). Include transaction hash in the 'X-Payment-Tx-Hash' header upon completion.",
-  "accepts": [
-    {
-      "scheme": "exact",
-      "network": "eip155:196",
-      "chainId": "eip155:196",
-      "numericChainId": 196,
-      "asset": "USDT0",
-      "payTo": "0xf313dcef4e1e22c01cea636c2631c74eac6e4518",
-      "amount": "0.05",
-      "tokenAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
-      "maxAmountRequired": "0.05"
-    }
-  ],
-  "paymentDetails": {
-    "recipient": "0xf313dcef4e1e22c01cea636c2631c74eac6e4518",
-    "amount": "0.05",
-    "asset": "USDT0",
-    "network": "eip155:196",
-    "chainId": "eip155:196",
-    "numericChainId": 196,
-    "caip2": "eip155:196",
-    "tokenAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
-    "networkName": "X Layer Mainnet"
-  }
-}
-```
+3. Broadcast 0.05 USDT0 payment on X Layer Mainnet (`0x779ded0c9e1022225f8e0630b35a9b54be713736`) to `0xf313dcef4e1e22c01cea636c2631c74eac6e4518`.
+4. Retry request including transaction hash or EIP-3009 signature payload.
 
 ### cURL Example
 
 ```bash
-# 1. Probe the endpoint to get payment coordinates
-curl -i -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
+# 1. Probe the endpoint to receive 402 challenge
+curl -i -X POST https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposal \
   -H "Content-Type: application/json" \
-  -d '{"proposalText": "Upgrade main governance contract"}'
+  -d '{"proposalText": "Upgrade main governance router contract on X Layer"}'
 
-# 2. Re-send once you submit the tx onchain with the Tx Hash
-curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
+# 2. Re-send request with transaction hash or payment signature
+curl -X POST https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposal \
   -H "Content-Type: application/json" \
-  -H "X-Payment-Tx-Hash: 0xYOUR_TX_HASH" \
-  -d '{"proposalText": "Upgrade main governance contract", "chain": "x-layer"}'
+  -H "X-Payment-Tx-Hash: 0x8ef439b1e...your_tx_hash..." \
+  -d '{"proposalText": "Upgrade main governance router contract on X Layer", "chain": "xlayer"}'
 ```
 
 ### Response Schema
 
 ```json
 {
-  "proposalSummary": "Upgrades Governor router to V2 on X Layer to optimize swap routing...",
+  "proposalSummary": "Upgrades Governor liquidity router on X Layer Mainnet to optimize swap routing...",
   "analysis": {
-    "strategicAlignment": "High alignment. Improves gas efficiency and reduces execution latency.",
+    "strategicAlignment": "High alignment with protocol expansion objectives.",
     "financialImpact": "Saves 15% in swap routing fees across treasury operations.",
     "securityRisks": "No malicious proxy patterns detected in target contract byte code.",
     "opportunities": "Enables cross-chain liquidity aggregation on X Layer."
@@ -165,42 +112,23 @@ curl -X POST https://gov-copilot.vercel.app/api/analyze_governance_proposal \
     ],
     "xLayerOptimizations": "Verify transaction has finality on block height > 50000.",
     "calldataHint": "cast send 0xabc... 'castVote(uint256,uint8)' 42 1"
-  }
+  },
+  "jobId": "task-1785234000",
+  "deliverableStatus": "SUBMITTED",
+  "deliverableUrl": "https://govcopilot-api.synarcdao.xyz/api/deliverable/task-1785234000"
 }
 ```
 
 ---
 
-## Playground (Testing Without Payment)
+## Ecosystem Integration
 
-The live playground bypasses payment for judges/testers via an internal `X-Playground-Request` header — no on-chain transaction required to try the analysis engine. Real agent-to-agent calls outside the playground still require the full x402 payment flow.
-
----
-
-## Environment Variables
-
-See `.env.example` for required variables:
-
-- `ASP_WALLET_ADDRESS` — ASP wallet receiving payments (`0xf313dcef4e1e22c01cea636c2631c74eac6e4518`)
-- `CHAIN_ID` — `196` (X Layer Mainnet)
-- `CAIP2_CHAIN_ID` — `eip155:196` (X Layer Mainnet)
-- `PAYMENT_TOKEN_ADDRESS` — `0x779ded0c9e102225f8e0630b35a9b54be713736` (USDT0 on X Layer Mainnet)
-- `GROQ_API_KEY` — server-side AI key (never exposed to client)
-- `GROQ_MODEL` — optional server-side Groq model override
-
----
-
-## Status & Ecosystem Integration
-
-- ✅ **Listed and live on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
-- Fully x402-compliant ASP, approved and publicly accessible via Onchain OS and OKX Agentic Wallet.
-- Deployed and live on X Layer Mainnet (`eip155:196`) using Mainnet USDT0 (`0x779ded0c9e102225f8e0630b35a9b54be713736`).
-- Developed by the team behind SynArc.
+- ✅ **Listed and Live on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
+- Deployed on X Layer Mainnet (`eip155:196`) using Mainnet USDT0 (`0x779ded0c9e1022225f8e0630b35a9b54be713736`).
+- Built by the team behind SynArc.
 
 ---
 
 ## License
 
 MIT
-
-
