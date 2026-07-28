@@ -169,7 +169,9 @@ async function testAllServices() {
   }
 
   const fallbackData: any = await emptyBodyRes.json();
-  console.log(`✅ Direct-accept fallback returned successful analysis:`);
+  console.log(`✅ Direct-accept fallback returned successful analysis of real SynArc proposal:`);
+  console.log(`   Source: ${fallbackData.source}`);
+  console.log(`   Source URL: ${fallbackData.sourceUrl}`);
   console.log(`   Vote: ${fallbackData.votingRecommendation?.vote}`);
   console.log(`   Summary: "${fallbackData.proposalSummary}"`);
 
