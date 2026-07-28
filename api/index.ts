@@ -6,6 +6,7 @@ import path from 'path';
 import { analyzeProposal } from '../src/services/analyzer.js';
 import { x402Middleware } from '../src/middleware/x402.js';
 import { getNetworkConfig } from '../src/config/network.js';
+import { getSynArcProposal } from '../src/services/synarc.js';
 
 dotenv.config();
 
@@ -91,15 +92,25 @@ app.all(['/api/analyze', '/api/analyze_governance_proposal', '/api/deliverable']
     const body = req.body || {};
     const query = req.query || {};
 
-    let proposalTitle = body.proposalTitle || query.proposalTitle || body.title || query.title || 'DAO Governance Proposal';
-    let proposalText = body.proposalText || query.proposalText || body.taskDescription || query.taskDescription || body.description || query.description || '';
-    const chain = body.chain || query.chain || 'ethereum';
-    const daoContext = body.daoContext || query.daoContext || 'DeFi Protocol DAO';
+    let proposalTitle = body.proposalTitle || query.proposalTitle || body.title || query.title;
+    let proposalText = body.proposalText || query.proposalText || body.taskDescription || query.taskDescription || body.description || query.description;
+    let chain = body.chain || query.chain || 'xlayer';
+    let daoContext = body.daoContext || query.daoContext || 'SynArc Protocol DAO';
     const treasurySnapshot = body.treasurySnapshot || query.treasurySnapshot;
 
-    // Fallback: If proposalText is empty, generate from title/context (handles direct-accept without client body)
+    let synarcSourceInfo: { source: string; sourceUrl: string } | undefined;
+
+    // Real SynArc Proposal Fallback: If proposalText is empty, fetch real proposal data from SynArc DAO
     if (!proposalText || proposalText.trim().length === 0) {
-      proposalText = `Governance Proposal: ${proposalTitle}. This proposal seeks DAO community approval and voting evaluation for protocol treasury management, security parameter adjustments, or strategic ecosystem initiatives under ${daoContext} on ${chain}.`;
+      const synarcProposal = await getSynArcProposal();
+      proposalTitle = synarcProposal.title;
+      proposalText = synarcProposal.proposalText;
+      chain = synarcProposal.chain;
+      daoContext = synarcProposal.daoContext;
+      synarcSourceInfo = {
+        source: synarcProposal.source,
+        sourceUrl: synarcProposal.sourceUrl,
+      };
     }
 
     console.log(
@@ -114,7 +125,14 @@ app.all(['/api/analyze', '/api/analyze_governance_proposal', '/api/deliverable']
       treasurySnapshot,
     });
 
-    res.json(result);
+    // Attach real SynArc DAO source attribution if fallback was used or requested
+    const responsePayload = {
+      ...result,
+      source: synarcSourceInfo?.source || 'SynArc DAO Governance Protocol',
+      sourceUrl: synarcSourceInfo?.sourceUrl || 'https://synarcdao.xyz',
+    };
+
+    res.json(responsePayload);
   } catch (error: any) {
     console.error('Error during proposal analysis endpoint:', error);
     res.status(500).json({
