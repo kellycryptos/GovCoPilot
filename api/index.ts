@@ -6,6 +6,12 @@ import path from 'path';
 import { analyzeProposal } from '../src/services/analyzer.js';
 import { x402Middleware } from '../src/middleware/x402.js';
 import { getNetworkConfig } from '../src/config/network.js';
+import {
+  saveDeliverable,
+  getDeliverable,
+  listDeliverables,
+  fetchTaskContextFromOKX,
+} from '../src/services/okx-deliverable.js';
 
 dotenv.config();
 
@@ -31,6 +37,7 @@ app.use(
       'X-OKX-Test-Wallet',
       'X-OKX-Agent-Id',
       'X-Job-Id',
+      'X-OKX-Job-Id',
     ],
     exposedHeaders: [
       'X-Payment-Address',
@@ -41,6 +48,7 @@ app.use(
       'X-Payment-Token-Address',
       'PAYMENT-REQUIRED',
       'WWW-Authenticate',
+      'X-Job-Id',
     ],
   })
 );
@@ -76,7 +84,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     name: 'GovCoPilot ASP',
-    version: '1.0.3',
+    version: '1.0.4',
     network: net.name,
     chainId: net.chainId,
     caip2ChainId: net.caip2ChainId,
@@ -86,43 +94,64 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Public endpoint to poll / query stored deliverables for OKX task marketplace (task-deliverable-list)
+app.get(['/api/deliverables', '/api/deliverable', '/api/deliverable/:jobId'], (req, res) => {
+  const jobId = (req.params.jobId || req.query.jobId || req.headers['x-job-id'] || req.headers['x-okx-job-id']) as string | undefined;
+
+  if (jobId) {
+    const item = getDeliverable(jobId);
+    if (item) {
+      res.json({ ok: true, deliverable: item });
+    } else {
+      res.status(404).json({
+        ok: false,
+        error: 'Deliverable not found',
+        message: `No deliverable record found for jobId: ${jobId}`,
+      });
+    }
+  } else {
+    const all = listDeliverables();
+    res.json({ ok: true, total: all.length, deliverables: all });
+  }
+});
+
 // REST API endpoint for proposal analysis (protected by x402 payment middleware)
-app.all(['/api/analyze', '/api/analyze_governance_proposal', '/api/deliverable'], x402Middleware, async (req, res) => {
+app.all(['/api/analyze', '/api/analyze_governance_proposal'], x402Middleware, async (req, res) => {
   try {
     const body = req.body || {};
     const query = req.query || {};
 
-    const proposalTitle = body.proposalTitle || query.proposalTitle || body.title || query.title;
-    const proposalText = body.proposalText || query.proposalText || body.taskDescription || query.taskDescription || body.description || query.description;
-    const chain = body.chain || query.chain || 'xlayer';
-    const daoContext = body.daoContext || query.daoContext || 'DAO Governance';
+    let jobId = (req.headers['x-job-id'] || req.headers['x-okx-job-id'] || body.jobId || query.jobId) as string | undefined;
+    let proposalTitle = body.proposalTitle || query.proposalTitle || body.title || query.title;
+    let proposalText = body.proposalText || query.proposalText || body.taskDescription || query.taskDescription || body.description || query.description;
+    let chain = body.chain || query.chain || 'xlayer';
+    let daoContext = body.daoContext || query.daoContext || 'DAO Governance';
     const treasurySnapshot = body.treasurySnapshot || query.treasurySnapshot;
 
-    // --- Content gate ---
-    // OKX's x402/task-402-pay flow is expected to pass the buyer's task content
-    // in the --body flag of `onchainos agent task-402-pay`, which replays it as
-    // the POST body. If that body is empty or missing, we cannot fabricate content.
-    //
-    // NOTE: OKX does NOT provide a server-side "fetch task content by job-id" API
-    // for ASPs to call back after receiving a payment — the task description lives
-    // in the buyer's agent session and is passed as the --body on replay.
-    // The correct fix is for buyers to include their proposal text in the task's
-    // --service-params / --body when using `task-402-pay`.
-    //
-    // If no content is provided, we return a clear error rather than fabricating
-    // a plausible-looking response.
+    // --- Dynamic task context lookup for direct-accept / empty body ---
+    // If proposalText is not provided in client POST body, but a jobId is supplied (via header/query/body),
+    // attempt to fetch the real task description submitted by the buyer at task-creation time.
+    if ((!proposalText || proposalText.trim().length === 0) && jobId) {
+      console.log(`[GovCoPilot API] Empty proposal body detected for jobId ${jobId}. Attempting task context lookup...`);
+      const ctx = await fetchTaskContextFromOKX(jobId);
+      if (ctx && ctx.text) {
+        proposalText = ctx.text;
+        proposalTitle = ctx.title || proposalTitle;
+      }
+    }
+
     if (!proposalText || proposalText.trim().length === 0) {
       console.warn(
         `[GovCoPilot API] Empty body received — no proposal content to analyze. ` +
-        `Job-id header: ${req.headers['x-job-id'] || req.headers['x-okx-job-id'] || 'not provided'}`
+        `Job-id header: ${jobId || 'not provided'}`
       );
       res.status(422).json({
         error: 'No proposal content provided',
         message:
           'GovCoPilot requires a governance proposal to analyze. ' +
           'Please include "proposalText" (and optionally "proposalTitle", "chain", "daoContext") ' +
-          'in the request body. ' +
-          'If using OKX task-402-pay, pass the proposal content via the --body flag.',
+          'in the request body or pass a valid "X-Job-Id" header. ' +
+          'If using OKX task-402-pay, pass the proposal content via the --body flag or --service-params.',
         requiredFields: {
           proposalText: 'The governance proposal text to analyze (required)',
           proposalTitle: 'Short title of the proposal (optional)',
@@ -146,7 +175,28 @@ app.all(['/api/analyze', '/api/analyze_governance_proposal', '/api/deliverable']
       treasurySnapshot,
     });
 
-    res.json(result);
+    // Save deliverable locally & register with OKX task-deliverable-save
+    const assignedJobId = jobId || `task-${Date.now()}`;
+    const deliverableRecord = saveDeliverable({
+      jobId: assignedJobId,
+      proposalTitle: proposalTitle || 'DAO Governance Proposal',
+      proposalText: proposalText,
+      votingRecommendation: result.votingRecommendation,
+      proposalSummary: result.proposalSummary,
+      keyInsights: result.keyInsights,
+      riskAssessment: result.riskAssessment,
+      timestamp: new Date().toISOString(),
+      status: 'SUBMITTED',
+    });
+
+    const responsePayload = {
+      ...result,
+      jobId: assignedJobId,
+      deliverableStatus: 'SUBMITTED',
+      deliverableUrl: `https://govcopilot-api.synarcdao.xyz/api/deliverable/${assignedJobId}`,
+    };
+
+    res.json(responsePayload);
   } catch (error: any) {
     console.error('Error during proposal analysis endpoint:', error);
     res.status(500).json({
