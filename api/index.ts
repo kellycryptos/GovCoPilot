@@ -6,7 +6,6 @@ import path from 'path';
 import { analyzeProposal } from '../src/services/analyzer.js';
 import { x402Middleware } from '../src/middleware/x402.js';
 import { getNetworkConfig } from '../src/config/network.js';
-import { getSynArcProposal } from '../src/services/synarc.js';
 
 dotenv.config();
 
@@ -31,6 +30,7 @@ app.use(
       'X-OKX-Test',
       'X-OKX-Test-Wallet',
       'X-OKX-Agent-Id',
+      'X-Job-Id',
     ],
     exposedHeaders: [
       'X-Payment-Address',
@@ -76,7 +76,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     name: 'GovCoPilot ASP',
-    version: '1.0.2',
+    version: '1.0.3',
     network: net.name,
     chainId: net.chainId,
     caip2ChainId: net.caip2ChainId,
@@ -92,29 +92,50 @@ app.all(['/api/analyze', '/api/analyze_governance_proposal', '/api/deliverable']
     const body = req.body || {};
     const query = req.query || {};
 
-    let proposalTitle = body.proposalTitle || query.proposalTitle || body.title || query.title;
-    let proposalText = body.proposalText || query.proposalText || body.taskDescription || query.taskDescription || body.description || query.description;
-    let chain = body.chain || query.chain || 'xlayer';
-    let daoContext = body.daoContext || query.daoContext || 'SynArc Protocol DAO';
+    const proposalTitle = body.proposalTitle || query.proposalTitle || body.title || query.title;
+    const proposalText = body.proposalText || query.proposalText || body.taskDescription || query.taskDescription || body.description || query.description;
+    const chain = body.chain || query.chain || 'xlayer';
+    const daoContext = body.daoContext || query.daoContext || 'DAO Governance';
     const treasurySnapshot = body.treasurySnapshot || query.treasurySnapshot;
 
-    let synarcSourceInfo: { source: string; sourceUrl: string } | undefined;
-
-    // Real SynArc Proposal Fallback: If proposalText is empty, fetch real proposal data from SynArc DAO
+    // --- Content gate ---
+    // OKX's x402/task-402-pay flow is expected to pass the buyer's task content
+    // in the --body flag of `onchainos agent task-402-pay`, which replays it as
+    // the POST body. If that body is empty or missing, we cannot fabricate content.
+    //
+    // NOTE: OKX does NOT provide a server-side "fetch task content by job-id" API
+    // for ASPs to call back after receiving a payment — the task description lives
+    // in the buyer's agent session and is passed as the --body on replay.
+    // The correct fix is for buyers to include their proposal text in the task's
+    // --service-params / --body when using `task-402-pay`.
+    //
+    // If no content is provided, we return a clear error rather than fabricating
+    // a plausible-looking response.
     if (!proposalText || proposalText.trim().length === 0) {
-      const synarcProposal = await getSynArcProposal();
-      proposalTitle = synarcProposal.title;
-      proposalText = synarcProposal.proposalText;
-      chain = synarcProposal.chain;
-      daoContext = synarcProposal.daoContext;
-      synarcSourceInfo = {
-        source: synarcProposal.source,
-        sourceUrl: synarcProposal.sourceUrl,
-      };
+      console.warn(
+        `[GovCoPilot API] Empty body received — no proposal content to analyze. ` +
+        `Job-id header: ${req.headers['x-job-id'] || req.headers['x-okx-job-id'] || 'not provided'}`
+      );
+      res.status(422).json({
+        error: 'No proposal content provided',
+        message:
+          'GovCoPilot requires a governance proposal to analyze. ' +
+          'Please include "proposalText" (and optionally "proposalTitle", "chain", "daoContext") ' +
+          'in the request body. ' +
+          'If using OKX task-402-pay, pass the proposal content via the --body flag.',
+        requiredFields: {
+          proposalText: 'The governance proposal text to analyze (required)',
+          proposalTitle: 'Short title of the proposal (optional)',
+          chain: 'Blockchain name, e.g. "xlayer", "ethereum" (optional, defaults to "xlayer")',
+          daoContext: 'Name of the DAO (optional)',
+        },
+        hint: 'If you are a buyer using the OKX task marketplace, include your proposal text in --service-params when creating the task, or in --body when running task-402-pay.',
+      });
+      return;
     }
 
     console.log(
-      `[GovCoPilot API] Executing analysis for "${proposalTitle}" (Length: ${proposalText.length} chars, Method: ${req.method}, IP: ${req.ip || 'unknown'})`
+      `[GovCoPilot API] Executing analysis for "${proposalTitle || '(no title)'}" (Length: ${proposalText.length} chars, Method: ${req.method}, IP: ${req.ip || 'unknown'})`
     );
 
     const result = await analyzeProposal({
@@ -125,14 +146,7 @@ app.all(['/api/analyze', '/api/analyze_governance_proposal', '/api/deliverable']
       treasurySnapshot,
     });
 
-    // Attach real SynArc DAO source attribution if fallback was used or requested
-    const responsePayload = {
-      ...result,
-      source: synarcSourceInfo?.source || 'SynArc DAO Governance Protocol',
-      sourceUrl: synarcSourceInfo?.sourceUrl || 'https://synarcdao.xyz',
-    };
-
-    res.json(responsePayload);
+    res.json(result);
   } catch (error: any) {
     console.error('Error during proposal analysis endpoint:', error);
     res.status(500).json({

@@ -331,11 +331,8 @@
         <!-- Input Form -->
         <div class="lg:col-span-5 bg-zinc-900 border border-zinc-850 p-6 rounded-2xl space-y-6">
           <div>
-            <div class="flex items-center justify-between mb-2">
-              <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Proposal Title</label>
-              <span class="text-[10px] bg-xlayer-cyan/10 text-xlayer-cyan px-2 py-0.5 rounded font-mono">SynArc DAO — Proposal #598</span>
-            </div>
-            <input id="proposal-title" type="text" value="PIP-102: Migrate GoalHook Liquidity Router & Core Vaults to X Layer" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:border-xlayer-cyan outline-none transition text-white" />
+            <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Proposal Title</label>
+            <input id="proposal-title" type="text" value="Migrate GoalHook Router to X Layer" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:border-xlayer-cyan outline-none transition text-white" />
           </div>
           <div>
             <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Blockchain</label>
@@ -347,7 +344,12 @@
           </div>
           <div>
             <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Proposal Text</label>
-            <textarea id="proposal-text" rows="8" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:border-xlayer-cyan outline-none transition text-white code-font">This proposal seeks community approval to migrate the primary GoalHook liquidity router and reserve vaults to X Layer Mainnet. The migration reduces swap routing overhead by 90%, leverages 2-second EVM block finality, and integrates OKX Agentic Wallet automated execution hooks for decentralized liquidity rebalancing.</textarea>
+            <textarea id="proposal-text" rows="8" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 px-3 text-sm focus:border-xlayer-cyan outline-none transition text-white code-font">This proposal seeks to migrate the primary liquidity router to X Layer. The migration aims to lower swap costs by 90% and leverage X Layer's fast EVM block finality.
+
+Steps:
+1. Deprecate the router contract on mainnet.
+2. Deploy RouterV2 on X Layer.
+3. Deposit 5,000 USDC from the treasury for boot liquidity.</textarea>
           </div>
           <button id="btn-analyze" class="w-full bg-gradient-to-r from-xlayer-blue to-xlayer-cyan text-black font-bold py-3 rounded-lg hover:opacity-90 transition flex items-center justify-center space-x-2 text-sm">
             <span>Analyze Proposal</span>
