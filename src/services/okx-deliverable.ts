@@ -1,12 +1,17 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-const DELIVERABLES_DIR = path.join(process.cwd(), 'data');
+// In serverless environments (Vercel), use os.tmpdir() (/tmp)
+const DELIVERABLES_DIR = path.join(os.tmpdir(), 'govcopilot-deliverables');
 const DELIVERABLES_FILE = path.join(DELIVERABLES_DIR, 'deliverables.json');
+
+// In-memory fallback map for instant serverless reads
+const inMemoryStore = new Map<string, DeliverableRecord>();
 
 export interface DeliverableRecord {
   jobId: string;
@@ -34,76 +39,90 @@ export interface DeliverableRecord {
 }
 
 function ensureStorageExists() {
-  if (!fs.existsSync(DELIVERABLES_DIR)) {
-    fs.mkdirSync(DELIVERABLES_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(DELIVERABLES_FILE)) {
-    fs.writeFileSync(DELIVERABLES_FILE, JSON.stringify([]), 'utf8');
+  try {
+    if (!fs.existsSync(DELIVERABLES_DIR)) {
+      fs.mkdirSync(DELIVERABLES_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(DELIVERABLES_FILE)) {
+      fs.writeFileSync(DELIVERABLES_FILE, JSON.stringify([]), 'utf8');
+    }
+  } catch (e: any) {
+    console.warn(`[Deliverables Storage] Using in-memory store due to filesystem restriction: ${e.message}`);
   }
 }
 
 export function saveDeliverable(record: DeliverableRecord): DeliverableRecord {
+  inMemoryStore.set(record.jobId.toLowerCase(), record);
+  inMemoryStore.set(record.jobId, record);
+
   ensureStorageExists();
-  const raw = fs.readFileSync(DELIVERABLES_FILE, 'utf8');
-  let list: DeliverableRecord[] = [];
+
   try {
-    list = JSON.parse(raw);
-  } catch {
-    list = [];
-  }
+    let list: DeliverableRecord[] = [];
+    if (fs.existsSync(DELIVERABLES_FILE)) {
+      const raw = fs.readFileSync(DELIVERABLES_FILE, 'utf8');
+      list = JSON.parse(raw);
+    }
 
-  // Deduplicate by jobId
-  const existingIdx = list.findIndex((d) => d.jobId === record.jobId);
-  if (existingIdx >= 0) {
-    list[existingIdx] = { ...list[existingIdx], ...record };
-  } else {
-    list.unshift(record);
-  }
+    const existingIdx = list.findIndex((d) => d.jobId === record.jobId);
+    if (existingIdx >= 0) {
+      list[existingIdx] = { ...list[existingIdx], ...record };
+    } else {
+      list.unshift(record);
+    }
 
-  fs.writeFileSync(DELIVERABLES_FILE, JSON.stringify(list, null, 2), 'utf8');
+    fs.writeFileSync(DELIVERABLES_FILE, JSON.stringify(list, null, 2), 'utf8');
 
-  // Write individual json file per jobId for CLI deliverable compatibility
-  const jobFile = path.join(DELIVERABLES_DIR, `deliverable_${record.jobId}.json`);
-  fs.writeFileSync(jobFile, JSON.stringify(record, null, 2), 'utf8');
+    // Write individual json file per jobId
+    const jobFile = path.join(DELIVERABLES_DIR, `deliverable_${record.jobId}.json`);
+    fs.writeFileSync(jobFile, JSON.stringify(record, null, 2), 'utf8');
 
-  // Try calling onchainos task-deliverable-save in background
-  try {
+    // Try calling onchainos task-deliverable-save in background if CLI is installed
     const shortId = record.jobId.slice(0, 10);
     const titleClean = (record.proposalTitle || 'Proposal').replace(/"/g, "'").slice(0, 30);
     const cmd = `onchainos agent task-deliverable-save --job-id "${record.jobId}" --role asp --file "${jobFile}" --title "${titleClean}" --short-id "${shortId}"`;
     exec(cmd, (err) => {
-      if (err) {
-        console.warn(`[OKX Deliverable Save Warning] Could not register with onchainos CLI: ${err.message}`);
-      } else {
+      if (!err) {
         console.log(`[OKX Deliverable Save Success] Registered deliverable for job ${record.jobId} with onchainos CLI`);
       }
     });
   } catch (e: any) {
-    console.warn(`[OKX Deliverable Save Exception] ${e.message}`);
+    console.warn(`[Deliverable File Save Note] ${e.message}`);
   }
 
   return record;
 }
 
 export function getDeliverable(jobId: string): DeliverableRecord | undefined {
-  ensureStorageExists();
-  const raw = fs.readFileSync(DELIVERABLES_FILE, 'utf8');
-  try {
-    const list: DeliverableRecord[] = JSON.parse(raw);
-    return list.find((d) => d.jobId === jobId || d.jobId.toLowerCase() === jobId.toLowerCase());
-  } catch {
-    return undefined;
+  if (inMemoryStore.has(jobId)) {
+    return inMemoryStore.get(jobId);
   }
+  if (inMemoryStore.has(jobId.toLowerCase())) {
+    return inMemoryStore.get(jobId.toLowerCase());
+  }
+
+  ensureStorageExists();
+  try {
+    if (fs.existsSync(DELIVERABLES_FILE)) {
+      const raw = fs.readFileSync(DELIVERABLES_FILE, 'utf8');
+      const list: DeliverableRecord[] = JSON.parse(raw);
+      return list.find((d) => d.jobId === jobId || d.jobId.toLowerCase() === jobId.toLowerCase());
+    }
+  } catch {
+    // fallback to inMemoryStore
+  }
+  return undefined;
 }
 
 export function listDeliverables(): DeliverableRecord[] {
   ensureStorageExists();
-  const raw = fs.readFileSync(DELIVERABLES_FILE, 'utf8');
   try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
+    if (fs.existsSync(DELIVERABLES_FILE)) {
+      const raw = fs.readFileSync(DELIVERABLES_FILE, 'utf8');
+      return JSON.parse(raw);
+    }
+  } catch {}
+  return Array.from(inMemoryStore.values());
 }
 
 /**
