@@ -37,7 +37,8 @@ const EIP3009_TYPES = {
 // The `amount` field MUST be a minimal-unit integer string (decimals=6).
 // ---------------------------------------------------------------------------
 function buildPaymentChallenge(networkConfig: ReturnType<typeof getNetworkConfig>, req: Request) {
-  const host = (req.headers['x-forwarded-host'] as string) || req.headers.host || 'gov-copilot-api.futuristic-talos-42b.workers.dev';
+  const isLocalhost = req.headers.host?.includes('localhost') || req.headers.host?.includes('127.0.0.1');
+  const host = isLocalhost ? req.headers.host : 'gov-copilot-api.futuristic-talos-42b.workers.dev';
   const endpointUrl = `https://${host}${req.path}`;
 
   return {
