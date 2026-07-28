@@ -38,7 +38,7 @@ const EIP3009_TYPES = {
 // ---------------------------------------------------------------------------
 function buildPaymentChallenge(networkConfig: ReturnType<typeof getNetworkConfig>, req: Request) {
   const isLocalhost = req.headers.host?.includes('localhost') || req.headers.host?.includes('127.0.0.1');
-  const host = isLocalhost ? req.headers.host : 'gov-copilot-api.futuristic-talos-42b.workers.dev';
+  const host = isLocalhost ? req.headers.host : 'govcopilot-api.synarcdao.xyz';
   const endpointUrl = `https://${host}${req.path}`;
 
   return {
