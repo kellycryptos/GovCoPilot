@@ -36,6 +36,12 @@ const networkConfig = getNetworkConfig();
 const NETWORK: Network = (networkConfig.caip2ChainId as Network) || 'eip155:196';
 const PAY_TO = networkConfig.aspWalletAddress; // "0xf313dcef4e1e22c01cea636c2631c74eac6e4518"
 
+// Dynamic pricing from environment configuration with sensible defaults
+const PRICE_ANALYSIS = process.env.SERVICE_PRICE_ANALYSIS || '$0.05';
+const PRICE_STRATEGY = process.env.SERVICE_PRICE_STRATEGY || '$0.02';
+const PRICE_RISK = process.env.SERVICE_PRICE_RISK || '$0.03';
+const PRICE_CALLDATA = process.env.SERVICE_PRICE_CALLDATA || '$0.04';
+
 // Initialize OKX Facilitator Client with OKX Developer Portal credentials from environment
 const facilitatorClient = new OKXFacilitatorClient({
   apiKey: process.env.OKX_API_KEY || '',
@@ -93,7 +99,7 @@ resourceServer.initialize = async () => {
   }
 };
 
-// Protected routes configuration matching OKX x402 v2 spec
+// Protected routes configuration matching OKX x402 v2 spec with dynamic pricing
 const routesConfig: Record<string, any> = {
   'POST /api/analyze_governance_proposal': {
     accepts: [
@@ -101,7 +107,7 @@ const routesConfig: Record<string, any> = {
         scheme: 'exact',
         network: NETWORK,
         payTo: PAY_TO,
-        price: '$0.05',
+        price: PRICE_ANALYSIS,
         asset: networkConfig.usdtContractAddress,
         extra: {
           name: 'USD\u20ae0',
@@ -118,7 +124,7 @@ const routesConfig: Record<string, any> = {
         scheme: 'exact',
         network: NETWORK,
         payTo: PAY_TO,
-        price: '$0.05',
+        price: PRICE_ANALYSIS,
         asset: networkConfig.usdtContractAddress,
         extra: {
           name: 'USD\u20ae0',
@@ -135,7 +141,7 @@ const routesConfig: Record<string, any> = {
         scheme: 'exact',
         network: NETWORK,
         payTo: PAY_TO,
-        price: '$0.05',
+        price: PRICE_ANALYSIS,
         asset: networkConfig.usdtContractAddress,
         extra: {
           name: 'USD\u20ae0',
@@ -152,7 +158,7 @@ const routesConfig: Record<string, any> = {
         scheme: 'exact',
         network: NETWORK,
         payTo: PAY_TO,
-        price: '$0.05',
+        price: PRICE_ANALYSIS,
         asset: networkConfig.usdtContractAddress,
         extra: {
           name: 'USD\u20ae0',
