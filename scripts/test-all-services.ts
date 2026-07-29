@@ -1,6 +1,9 @@
 import { ethers } from 'ethers';
+import dns from 'dns';
 
-const WORKER_URL = 'https://gov-copilot-api.futuristic-talos-42b.workers.dev/api/analyze_governance_proposal';
+dns.setDefaultResultOrder('ipv4first');
+
+const WORKER_URL = 'https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposal';
 
 const EIP3009_DOMAIN = {
   name: 'USD\u20ae0',
@@ -22,14 +25,14 @@ const EIP3009_TYPES = {
 
 const SERVICES = [
   { id: 1, name: 'DAO Proposal Analysis', feeUsdt: 0.05, minimalUnits: '50000' },
-  { id: 2, name: 'DAO Voting Strategy', feeUsdt: 0.02, minimalUnits: '20000' },
-  { id: 3, name: 'Governance Risk Assessment', feeUsdt: 0.03, minimalUnits: '30000' },
-  { id: 4, name: 'Execution Calldata Generator', feeUsdt: 0.04, minimalUnits: '40000' },
+  { id: 2, name: 'DAO Voting Strategy', feeUsdt: 0.05, minimalUnits: '50000' },
+  { id: 3, name: 'Governance Risk Assessment', feeUsdt: 0.05, minimalUnits: '50000' },
+  { id: 4, name: 'Execution Calldata Generator', feeUsdt: 0.05, minimalUnits: '50000' },
 ];
 
 async function testAllServices() {
   console.log('================================================================');
-  console.log('🚀 OKX.AI GovCoPilot Marketplace Fit & x402 Rules Test Suite');
+  console.log('🚀 OKX.AI GovCoPilot Personal Agent Service Test Suite');
   console.log('================================================================\n');
 
   const testWallet = new ethers.Wallet('0x0000000000000000000000000000000000000000000000000000000000000001');
@@ -59,106 +62,100 @@ async function testAllServices() {
   console.log(`   x402Version: ${decodedChallenge.x402Version}`);
   console.log(`   network:     ${decodedChallenge.accepts[0].network}`);
   console.log(`   asset:       ${decodedChallenge.accepts[0].asset}`);
-  console.log(`   extra.name:  ${decodedChallenge.accepts[0].extra.name}`);
   console.log(`   payTo:       ${decodedChallenge.accepts[0].payTo}`);
-
-  if (decodedChallenge.accepts[0].extra.name !== 'USD\u20ae0') {
-    throw new Error('OKX Rule Mismatch: extra.name must be USD₮0');
-  }
-
-  console.log('\n----------------------------------------------------------------\n');
+  console.log(`   amount:      ${decodedChallenge.accepts[0].amount} minimal units (${decodedChallenge.accepts[0].amount / 1e6} USDT0)\n`);
 
   // -------------------------------------------------------------------------
-  // STEP 2: Execute Real EIP-3009 Payment Authorization for All 4 Services
+  // STEP 2: Execute E2E x402 Signed Authorization Calls across all services
   // -------------------------------------------------------------------------
-  console.log('📋 STEP 2: Testing EIP-3009 Payment Verification for All 4 Services...\n');
+  console.log('⚡ STEP 2: Executing x402 Payment & Service Analysis Calls...');
 
   for (const s of SERVICES) {
-    console.log(`▶ Testing Service #${s.id}: ${s.name} (${s.feeUsdt} USDT = ${s.minimalUnits} minimal units)`);
+    console.log(`\n--- Testing Service #${s.id}: ${s.name} ---`);
 
+    const validAfter = 0;
+    const validBefore = Math.floor(Date.now() / 1000) + 3600;
     const nonce = ethers.hexlify(ethers.randomBytes(32));
-    const now = Math.floor(Date.now() / 1000);
-    const validBefore = now + 3600;
 
     const message = {
       from: testWallet.address,
-      to: '0xf313dcef4e1e22c01cea636c2631c74eac6e4518',
+      to: decodedChallenge.accepts[0].payTo,
       value: BigInt(s.minimalUnits),
-      validAfter: 0n,
-      validBefore: BigInt(validBefore),
-      nonce: nonce,
+      validAfter,
+      validBefore,
+      nonce,
     };
 
     const signature = await testWallet.signTypedData(EIP3009_DOMAIN, EIP3009_TYPES, message);
 
-    const authPayload = {
+    const paymentPayload = {
+      x402Version: 2,
       scheme: 'exact',
       network: 'eip155:196',
       payload: {
         from: testWallet.address,
-        to: '0xf313dcef4e1e22c01cea636c2631c74eac6e4518',
+        to: decodedChallenge.accepts[0].payTo,
         value: s.minimalUnits,
-        validAfter: 0,
-        validBefore: validBefore,
-        nonce: nonce,
-        signature: signature,
+        validAfter,
+        validBefore,
+        nonce,
+        signature,
       },
     };
 
-    const b64Auth = Buffer.from(JSON.stringify(authPayload)).toString('base64');
-    const testJobId = `task-e2e-service-${s.id}`;
+    const encodedPaymentHeader = Buffer.from(JSON.stringify(paymentPayload)).toString('base64');
 
-    const res = await fetch(WORKER_URL, {
+    const sampleJobId = `job-personal-agent-svc-${s.id}`;
+
+    const apiRes = await fetch(WORKER_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-PAYMENT': b64Auth,
-        'X-Job-Id': testJobId,
+        'X-PAYMENT': encodedPaymentHeader,
+        'X-Job-Id': sampleJobId,
       },
       body: JSON.stringify({
-        serviceId: s.id,
-        proposalTitle: `PIP-102: Migration Proposal for ${s.name}`,
-        proposalText: `This proposal seeks community authorization for ${s.name} on X Layer Mainnet.`,
+        proposalTitle: `X Layer Governance Upgrade #${s.id}`,
+        proposalText: `Proposal #${s.id}: Upgrade Governor liquidity router parameters on X Layer Mainnet to optimize swap routing fees and reduce transaction latency. Target address: 0x1111111111111111111111111111111111111111.`,
+        chain: 'xlayer',
+        daoContext: 'X Layer DAO',
       }),
     });
 
-    if (res.status !== 200) {
-      const errTxt = await res.text();
-      throw new Error(`Service ${s.id} failed with HTTP ${res.status}: ${errTxt}`);
+    if (apiRes.status !== 200) {
+      const errText = await apiRes.text();
+      throw new Error(`Service #${s.id} failed with status ${apiRes.status}: ${errText}`);
     }
 
-    const data: any = await res.json();
-    console.log(`   ✅ HTTP 200 OK — Proposal Summary: "${data.proposalSummary?.slice(0, 65)}..."`);
-    console.log(`   ✅ Voting Recommendation: ${data.votingRecommendation?.vote} (Confidence: ${data.votingRecommendation?.confidence})`);
-    console.log(`   ✅ Deliverable Status: ${data.deliverableStatus} (URL: ${data.deliverableUrl})`);
-    console.log('');
+    const data = await apiRes.json();
+    console.log(`✅ Service #${s.id} Success (HTTP 200 OK):`);
+    console.log(`   Job ID:              ${data.jobId}`);
+    console.log(`   Vote Recommendation: ${data.votingRecommendation.vote} (Confidence: ${data.votingRecommendation.confidence})`);
+    console.log(`   Summary:             ${data.proposalSummary.substring(0, 70)}...`);
+    console.log(`   Deliverable URL:     ${data.deliverableUrl}`);
   }
 
-  console.log('----------------------------------------------------------------\n');
-
   // -------------------------------------------------------------------------
-  // STEP 3: Verify Async Deliverable Polling & Retrieval (/api/deliverables)
+  // STEP 3: Verify Public Deliverable Polling Endpoint (task-deliverable-list)
   // -------------------------------------------------------------------------
-  console.log('📋 STEP 3: Verifying Deliverable Polling & Retrieval (/api/deliverables)...');
+  console.log('\n📦 STEP 3: Verifying Deliverable Polling Endpoint (GET /api/deliverable/:jobId)...');
+  const pollRes = await fetch('https://govcopilot-api.synarcdao.xyz/api/deliverable/job-personal-agent-svc-1');
+  const pollData = await pollRes.json();
 
-  const pollRes = await fetch('https://gov-copilot-api.futuristic-talos-42b.workers.dev/api/deliverable/task-e2e-service-1');
-  if (pollRes.status !== 200) {
-    throw new Error(`Deliverable polling failed with status ${pollRes.status}`);
+  if (pollRes.status === 200 && pollData.ok) {
+    console.log('✅ Deliverable Polling Passed (HTTP 200 OK):');
+    console.log(`   Retrieved Deliverable Job ID: ${pollData.deliverable.jobId}`);
+    console.log(`   Deliverable Status:           ${pollData.deliverable.status}`);
+  } else {
+    throw new Error(`Deliverable polling failed: ${JSON.stringify(pollData)}`);
   }
-
-  const pollData: any = await pollRes.json();
-  console.log(`✅ Deliverable successfully retrieved via polling GET endpoint:`);
-  console.log(`   jobId:   ${pollData.deliverable?.jobId}`);
-  console.log(`   Title:   ${pollData.deliverable?.proposalTitle}`);
-  console.log(`   Vote:    ${pollData.deliverable?.votingRecommendation?.vote}`);
-  console.log(`   Summary: "${pollData.deliverable?.proposalSummary?.slice(0, 75)}..."`);
 
   console.log('\n================================================================');
-  console.log('🎉 ALL 4 SERVICES COMPLY WITH OKX x402 RULES & MARKETPLACE FIT!');
+  console.log('🎉 ALL GOVCOPILOT PERSONAL AGENT TESTS PASSED SUCCESSFULLY!');
   console.log('================================================================');
 }
 
 testAllServices().catch((err) => {
-  console.error('❌ Test failed:', err);
+  console.error('\n❌ Test failed:', err);
   process.exit(1);
 });

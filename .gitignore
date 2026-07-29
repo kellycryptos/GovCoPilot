@@ -6,3 +6,5 @@ dist/
 .agents/
 .vercel
 tmp_avatar.png
+scripts/debug_middleware.ts
+scripts/test_*.ts
