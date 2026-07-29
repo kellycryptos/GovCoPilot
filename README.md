@@ -2,7 +2,7 @@
 
 **Autonomous DAO Governance Co-Pilot on X Layer Mainnet**
 
-✅ **Listed and Live on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
+✅ **Listed on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
 
 GovCoPilot is an Agent Service Provider (ASP) that analyzes DAO governance proposals and returns structured, machine-readable recommendations: strategic alignment, financial impact, security risk assessment, a confidence-scored voting recommendation, and ready-to-execute EVM calldata — via x402-paid API calls and Onchain OS agent task marketplace integration.
 
@@ -23,29 +23,41 @@ GovCoPilot is built by the team behind SynArc, leveraging governance data models
 | **Chain ID (CAIP-2)** | `eip155:196` (Numeric: `196`) |
 | **RPC URL** | `https://rpc.xlayer.tech` |
 | **ASP Wallet Address** | `0xf313dcef4e1e22c01cea636c2631c74eac6e4518` |
-| **Payment Asset & Token Address** | `0.05 USDT0` (`0x779ded0c9e1022225f8e0630b35a9b54be713736`) |
+| **Payment Asset & Token Address** | `USDT0` (`0x779ded0c9e1022225f8e0630b35a9b54be713736`) |
 
 ---
 
-## 🏗️ Architecture Decisions & Edge Infrastructure
+## 🤖 Registered OKX Agent Services & Pricing
 
-### Why Cloudflare Edge Workers over Vercel?
-During OKX Agentic Wallet security testing, requests routed through generic Vercel subdomains were flagged by buyer-policy CDN security rules. To guarantee 100% unblocked, low-latency execution across all security probes:
-- GovCoPilot API is deployed directly to **Cloudflare Edge Infrastructure** on `govcopilot-api.synarcdao.xyz`.
-- Cloudflare Edge terminates SSL with dedicated TLS certificates and routes traffic directly to the Worker backend without CDN policy blocks.
+GovCoPilot exposes 4 specialized AI Agent services registered on the OKX Agent Marketplace ([#5965](https://www.okx.ai/agents/5965)):
 
-### Dual-Mode Architecture: A2MCP + A2A Support
+| Service Name | Price (USDT0) | Required Input | Description |
+|---|---|---|---|
+| 🔍 **DAO Proposal Analysis** | `0.05 USDT` | `proposalText` | Full multi-dimensional DAO proposal analysis returning strategy, security assessment, confidence score, and EVM calldata. |
+| 🗳️ **DAO Voting Strategy** | `0.02 USDT` | `proposalTitle`, `proposalText`, `chain` | Fast confidence-scored voting strategy recommendations (YES/NO/ABSTAIN) for DAO proposals on X Layer. |
+| 🛡️ **Governance Risk Assessment** | `0.03 USDT` | `proposalTitle`, `proposalText` | Deep security, treasury impact, and smart contract vulnerability risk modeling for governance proposals. |
+| ⚙️ **Execution Calldata Generator** | `0.04 USDT` | `proposalTitle`, `proposalText`, `executionContext` | Generates EVM-compatible execution calldata and transaction parameters for approved DAO proposals. |
 
-GovCoPilot natively supports both OKX payment and delivery models:
+---
+
+## 🏗️ Architecture & SDK Integration
+
+### Official OKX Payment SDK Integration (`@okxweb3/x402-express`)
+GovCoPilot natively integrates the official OKX Payment SDK stack:
+- `@okxweb3/x402-express` (v0.1.1) `paymentMiddleware`
+- `@okxweb3/x402-core` (v0.1.0) `OKXFacilitatorClient`
+- `@okxweb3/x402-evm` (v0.2.1) `ExactEvmScheme`
+
+### Dual-Mode Execution: A2MCP + A2A Support
 
 1. **A2MCP Mode (Instant Pay-Per-Call)**:
    - Client sends POST request → receives HTTP 402 challenge header with `extra: { name: "USD₮0", version: "1" }`.
    - Client replays request with signed EIP-3009/Permit2 authorization (`PAYMENT-SIGNATURE` or `X-PAYMENT`).
    - GovCoPilot validates authorization and synchronously returns the full JSON analysis payload with HTTP 200 OK.
 
-2. **A2A / Direct-Accept Task Mode (Task Description Retrieval & Deliverable Polling)**:
+2. **A2A / Direct-Accept Task Mode**:
    - When a buyer accepts/pays a task via `direct-accept` without submitting a client-side POST body, GovCoPilot automatically fetches the buyer's original task description via OKX CLI `onchainos agent common context <jobId>`.
-   - GovCoPilot processes the task description, persists the deliverable (`os.tmpdir()` + in-memory store), and registers it with `onchainos agent task-deliverable-save`.
+   - GovCoPilot processes the task description, persists the deliverable, and registers it with `onchainos agent task-deliverable-save`.
    - The analysis result is queryable via `GET /api/deliverable/:jobId` or OKX CLI `onchainos agent task-deliverable-list --job-id <jobId>`.
 
 ---
@@ -59,21 +71,14 @@ GovCoPilot natively supports both OKX payment and delivery models:
   - Payment asset hardcoded to Mainnet **USDT0 (`0x779ded0c9e1022225f8e0630b35a9b54be713736`)**.
   - CORS headers exposed (`Access-Control-Expose-Headers`) for cross-origin callers.
 - **On-Chain EIP-3009 & Tx Verification:** Interacts directly with X Layer Mainnet RPC to verify EIP-3009 authorization signatures and on-chain ERC20 transfers.
-- **Replay Attack Protection:** Tracks EIP-3009 nonces and transaction hashes in middleware to prevent replay reuse.
+- **Replay Attack Protection:** Tracks nonces and transaction hashes in middleware to prevent replay double-spending.
 - **LLM Reasoning Engine:** Powered by Groq AI (`llama-3.3-70b-versatile`) with enforced JSON output schema for machine parsing.
 
 ---
 
-## API Reference & x402 Protocol Specification
+## API Reference & cURL Example
 
 **Endpoint:** `POST https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposal`
-
-### x402 Flow
-
-1. Probe the endpoint without payment headers.
-2. Receive `402 Payment Required` with payment coordinates in headers and JSON payload.
-3. Broadcast 0.05 USDT0 payment on X Layer Mainnet (`0x779ded0c9e1022225f8e0630b35a9b54be713736`) to `0xf313dcef4e1e22c01cea636c2631c74eac6e4518`.
-4. Retry request including transaction hash or EIP-3009 signature payload.
 
 ### cURL Example
 
@@ -123,7 +128,7 @@ curl -X POST https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposa
 
 ## Ecosystem Integration
 
-- ✅ **Listed and Live on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
+- ✅ **Listed on OKX.AI — [Agent ID 5965](https://www.okx.ai/agents/5965)**
 - Deployed on X Layer Mainnet (`eip155:196`) using Mainnet USDT0 (`0x779ded0c9e1022225f8e0630b35a9b54be713736`).
 - Built by the team behind SynArc.
 
