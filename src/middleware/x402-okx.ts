@@ -17,6 +17,9 @@ const NETWORK: Network = (networkConfig.caip2ChainId as Network) || 'eip155:196'
 const PAY_TO = networkConfig.aspWalletAddress; // "0xf313dcef4e1e22c01cea636c2631c74eac6e4518"
 
 const PRICE_ANALYSIS = process.env.SERVICE_PRICE_ANALYSIS || '$0.05';
+const PRICE_VOTING   = process.env.SERVICE_PRICE_VOTING   || '$0.05';
+const PRICE_RISK     = process.env.SERVICE_PRICE_RISK     || '$0.05';
+const PRICE_CALLDATA = process.env.SERVICE_PRICE_CALLDATA || '$0.05';
 
 // Initialize OKX Facilitator Client with credentials from environment
 const rawFacilitatorClient = new OKXFacilitatorClient({
@@ -108,10 +111,31 @@ const routesConfig: Record<string, any> = {
         payTo: PAY_TO,
         price: PRICE_ANALYSIS,
         asset: networkConfig.usdtContractAddress,
-        extra: {
-          name: 'USD\u20ae0',
-          version: '1',
-        },
+        extra: { name: 'USD\u20ae0', version: '1' },
+      },
+      {
+        scheme: 'exact',
+        network: NETWORK,
+        payTo: PAY_TO,
+        price: PRICE_VOTING,
+        asset: networkConfig.usdtContractAddress,
+        extra: { name: 'USD\u20ae0', version: '1' },
+      },
+      {
+        scheme: 'exact',
+        network: NETWORK,
+        payTo: PAY_TO,
+        price: PRICE_RISK,
+        asset: networkConfig.usdtContractAddress,
+        extra: { name: 'USD\u20ae0', version: '1' },
+      },
+      {
+        scheme: 'exact',
+        network: NETWORK,
+        payTo: PAY_TO,
+        price: PRICE_CALLDATA,
+        asset: networkConfig.usdtContractAddress,
+        extra: { name: 'USD\u20ae0', version: '1' },
       },
     ],
     description: 'GovCoPilot — AI-powered DAO governance proposal analysis on X Layer.',
@@ -125,10 +149,31 @@ const routesConfig: Record<string, any> = {
         payTo: PAY_TO,
         price: PRICE_ANALYSIS,
         asset: networkConfig.usdtContractAddress,
-        extra: {
-          name: 'USD\u20ae0',
-          version: '1',
-        },
+        extra: { name: 'USD\u20ae0', version: '1' },
+      },
+      {
+        scheme: 'exact',
+        network: NETWORK,
+        payTo: PAY_TO,
+        price: PRICE_VOTING,
+        asset: networkConfig.usdtContractAddress,
+        extra: { name: 'USD\u20ae0', version: '1' },
+      },
+      {
+        scheme: 'exact',
+        network: NETWORK,
+        payTo: PAY_TO,
+        price: PRICE_RISK,
+        asset: networkConfig.usdtContractAddress,
+        extra: { name: 'USD\u20ae0', version: '1' },
+      },
+      {
+        scheme: 'exact',
+        network: NETWORK,
+        payTo: PAY_TO,
+        price: PRICE_CALLDATA,
+        asset: networkConfig.usdtContractAddress,
+        extra: { name: 'USD\u20ae0', version: '1' },
       },
     ],
     description: 'GovCoPilot — AI-powered DAO governance proposal analysis on X Layer.',
