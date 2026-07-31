@@ -70,7 +70,7 @@ const defaultSupportedResponse = {
   signers: {},
 };
 
-const seedSupportedMaps = () => {
+export const seedSupportedMaps = () => {
   try {
     const versionMap = (resourceServer as any).supportedResponsesMap.get(2) || new Map();
     const networkMap = versionMap.get(NETWORK) || new Map();
@@ -180,10 +180,16 @@ export async function x402OkxMiddleware(req: Request, res: Response, next: NextF
   }
 
   try {
+    seedSupportedMaps();
     return await sdkMiddleware(req, res, next);
   } catch (err: any) {
     console.error(`[okx-x402-sdk Error] Middleware error for ${req.method} ${req.path}:`, err);
-    return next(err);
+    seedSupportedMaps();
+    try {
+      return await sdkMiddleware(req, res, next);
+    } catch (retryErr: any) {
+      return next(retryErr);
+    }
   }
 }
 
