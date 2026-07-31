@@ -6,100 +6,64 @@
  * https://web3.okx.com/onchainos/dev-docs/payments/service-seller-sdk
  */
 
-import dns from 'dns';
 import { Request, Response, NextFunction } from 'express';
 import { paymentMiddleware, x402ResourceServer, Network } from '@okxweb3/x402-express';
 import { ExactEvmScheme } from '@okxweb3/x402-evm/exact/server';
 import { OKXFacilitatorClient } from '@okxweb3/x402-core';
 import { getNetworkConfig } from '../config/network.js';
 
-// Fallback DNS resolution for OKX domains when local DNS lookup fails
-const origLookup = dns.lookup;
-(dns as any).lookup = (hostname: string, options: any, callback: any) => {
-  if (typeof options === 'function') {
-    callback = options;
-    options = {};
-  }
-  return origLookup(hostname, options, (err: any, address: any, family: any) => {
-    if (err && (hostname === 'web3.okx.com' || hostname === 'www.okx.com' || hostname === 'okx.com')) {
-      const ip = '104.18.43.174';
-      if (options && options.all) {
-        return callback(null, [{ address: ip, family: 4 }]);
-      }
-      return callback(null, ip, 4);
-    }
-    return callback(err, address, family);
-  });
-};
-
 const networkConfig = getNetworkConfig();
 const NETWORK: Network = (networkConfig.caip2ChainId as Network) || 'eip155:196';
 const PAY_TO = networkConfig.aspWalletAddress; // "0xf313dcef4e1e22c01cea636c2631c74eac6e4518"
 
-// Dynamic pricing from environment configuration with sensible defaults
 const PRICE_ANALYSIS = process.env.SERVICE_PRICE_ANALYSIS || '$0.05';
-const PRICE_STRATEGY = process.env.SERVICE_PRICE_STRATEGY || '$0.02';
-const PRICE_RISK = process.env.SERVICE_PRICE_RISK || '$0.03';
-const PRICE_CALLDATA = process.env.SERVICE_PRICE_CALLDATA || '$0.04';
 
-// Initialize OKX Facilitator Client with OKX Developer Portal credentials from environment
-const facilitatorClient = new OKXFacilitatorClient({
+// Initialize OKX Facilitator Client with credentials from environment
+const rawFacilitatorClient = new OKXFacilitatorClient({
   apiKey: process.env.OKX_API_KEY || '',
   secretKey: process.env.OKX_SECRET_KEY || '',
   passphrase: process.env.OKX_PASSPHRASE || '',
 });
 
+// Wrap verify and getSupported to provide real outbound network execution logging
+const origVerify = rawFacilitatorClient.verify.bind(rawFacilitatorClient);
+rawFacilitatorClient.verify = async (payload: any, requirements: any) => {
+  console.log(`[OKX Facilitator Outbound] Sending verify request to OKX API (scheme: ${requirements?.scheme}, network: ${requirements?.network})...`);
+  try {
+    const res = await origVerify(payload, requirements);
+    console.log(`[OKX Facilitator Outbound] Verify response received from OKX API: isValid=${res?.isValid}`);
+    return res;
+  } catch (err: any) {
+    console.error(`[OKX Facilitator Outbound] Verify call failed:`, err?.message || err);
+    throw err;
+  }
+};
+
+const origGetSupported = rawFacilitatorClient.getSupported.bind(rawFacilitatorClient);
+rawFacilitatorClient.getSupported = async () => {
+  console.log(`[OKX Facilitator Outbound] Syncing supported payment kinds from OKX API...`);
+  try {
+    const res = await origGetSupported();
+    console.log(`[OKX Facilitator Outbound] Supported payment kinds synced successfully.`);
+    return res;
+  } catch (err: any) {
+    console.error(`[OKX Facilitator Outbound] getSupported call failed:`, err?.message || err);
+    throw err;
+  }
+};
+
 // Initialize Resource Server and register EVM Exact Scheme
-const resourceServer = new x402ResourceServer(facilitatorClient);
+export const resourceServer = new x402ResourceServer(rawFacilitatorClient);
 resourceServer.register(NETWORK, new ExactEvmScheme());
 
-// Seed default supported response map for OKX X Layer (eip155:196) exact scheme
-const defaultSupportedResponse = {
-  kinds: [
-    {
-      x402Version: 2,
-      scheme: 'exact',
-      network: NETWORK,
-      extra: { name: 'USD\u20ae0', version: '1' },
-    },
-  ],
-  extensions: [],
-  signers: {},
-};
+// Synchronize resourceServer with OKX Facilitator on startup
+resourceServer.initialize().then(() => {
+  console.log('[x402-okx-sdk] ResourceServer successfully initialized with OKX Facilitator Service.');
+}).catch((err) => {
+  console.warn('[x402-okx-sdk] ResourceServer initialization warning:', err.message || err);
+});
 
-const seedSupportedMaps = () => {
-  try {
-    const versionMap = (resourceServer as any).supportedResponsesMap.get(2) || new Map();
-    const networkMap = versionMap.get(NETWORK) || new Map();
-    networkMap.set('exact', defaultSupportedResponse);
-    versionMap.set(NETWORK, networkMap);
-    (resourceServer as any).supportedResponsesMap.set(2, versionMap);
-
-    const clientVersionMap = (resourceServer as any).facilitatorClientsMap.get(2) || new Map();
-    const clientNetworkMap = clientVersionMap.get(NETWORK) || new Map();
-    clientNetworkMap.set('exact', facilitatorClient);
-    clientVersionMap.set(NETWORK, clientNetworkMap);
-    (resourceServer as any).facilitatorClientsMap.set(2, clientNetworkMap);
-  } catch (err) {
-    console.warn('[x402-okx-sdk] Seeding supportedResponsesMap failed:', err);
-  }
-};
-
-// Initial seed
-seedSupportedMaps();
-
-// Wrap initialize to preserve fallback scheme if network lookup fails
-const origInit = resourceServer.initialize.bind(resourceServer);
-resourceServer.initialize = async () => {
-  try {
-    await origInit();
-  } catch (err: any) {
-    console.log(`[x402-okx-sdk] Facilitator sync note: ${err.message}. Preserving registered EVM exact scheme.`);
-    seedSupportedMaps();
-  }
-};
-
-// Protected routes configuration matching OKX x402 v2 spec with dynamic pricing
+// Protected routes configuration matching OKX x402 v2 spec
 const routesConfig: Record<string, any> = {
   'POST /api/analyze_governance_proposal': {
     accepts: [
@@ -171,9 +135,8 @@ const routesConfig: Record<string, any> = {
   },
 };
 
-// Create payment middleware instance from official OKX SDK
-// Set syncFacilitatorOnStart = false to ensure non-blocking server startup
-const sdkMiddleware = paymentMiddleware(routesConfig as any, resourceServer, undefined, undefined, false);
+// Create payment middleware instance directly from official OKX SDK
+const sdkMiddleware = paymentMiddleware(routesConfig as any, resourceServer);
 
 export async function x402OkxMiddleware(req: Request, res: Response, next: NextFunction) {
   if (process.env.BYPASS_PAYMENT_VERIFICATION === 'true') {

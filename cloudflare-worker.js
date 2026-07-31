@@ -27,6 +27,7 @@ export default {
 
     const headers = new Headers(request.headers);
     headers.set('X-Forwarded-Host', url.host);
+    headers.set('X-Forwarded-Proto', 'https');
     headers.set('Host', new URL(UPSTREAM_URL).host);
 
     const init = {
