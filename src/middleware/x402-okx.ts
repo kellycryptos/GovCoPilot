@@ -174,9 +174,23 @@ const routesConfig: Record<string, any> = {
 const sdkMiddleware = paymentMiddleware(routesConfig as any, resourceServer, undefined, undefined, false);
 
 export async function x402OkxMiddleware(req: Request, res: Response, next: NextFunction) {
-  if (req.headers['x-forwarded-host']) {
-    req.headers.host = (req.headers['x-forwarded-host'] as string).split(',')[0].trim();
-  }
+  // Guarantee payment-required header resource.url matches public ASP domain
+  const origSetHeader = res.setHeader.bind(res);
+  res.setHeader = function(name: string, value: any) {
+    if (typeof name === 'string' && name.toLowerCase() === 'payment-required' && typeof value === 'string') {
+      try {
+        const decoded = JSON.parse(Buffer.from(value, 'base64').toString('utf-8'));
+        if (decoded && decoded.resource) {
+          const publicHost = process.env.PUBLIC_DOMAIN || 'govcopilot-api.synarcdao.xyz';
+          decoded.resource.url = `https://${publicHost}${req.path}`;
+          value = Buffer.from(JSON.stringify(decoded)).toString('base64');
+        }
+      } catch (err) {
+        console.warn('[x402-okx-sdk] payment-required header rewrite warning:', err);
+      }
+    }
+    return origSetHeader(name, value);
+  };
 
   if (process.env.BYPASS_PAYMENT_VERIFICATION === 'true') {
     console.log(`[okx-x402-sdk] Dev bypass active for ${req.method} ${req.path}`);
