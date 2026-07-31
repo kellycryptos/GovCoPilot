@@ -56,11 +56,46 @@ rawFacilitatorClient.getSupported = async () => {
 export const resourceServer = new x402ResourceServer(rawFacilitatorClient);
 resourceServer.register(NETWORK, new ExactEvmScheme());
 
+// Seed supported response map fallback to guarantee 402 header generation during server startup
+const defaultSupportedResponse = {
+  kinds: [
+    {
+      x402Version: 2,
+      scheme: 'exact',
+      network: NETWORK,
+      extra: { name: 'USD\u20ae0', version: '1' },
+    },
+  ],
+  extensions: [],
+  signers: {},
+};
+
+const seedSupportedMaps = () => {
+  try {
+    const versionMap = (resourceServer as any).supportedResponsesMap.get(2) || new Map();
+    const networkMap = versionMap.get(NETWORK) || new Map();
+    networkMap.set('exact', defaultSupportedResponse);
+    versionMap.set(NETWORK, networkMap);
+    (resourceServer as any).supportedResponsesMap.set(2, versionMap);
+
+    const clientVersionMap = (resourceServer as any).facilitatorClientsMap.get(2) || new Map();
+    const clientNetworkMap = clientVersionMap.get(NETWORK) || new Map();
+    clientNetworkMap.set('exact', rawFacilitatorClient);
+    clientVersionMap.set(NETWORK, clientNetworkMap);
+    (resourceServer as any).facilitatorClientsMap.set(2, clientNetworkMap);
+  } catch (err) {
+    console.warn('[x402-okx-sdk] Seeding supportedResponsesMap failed:', err);
+  }
+};
+
+seedSupportedMaps();
+
 // Synchronize resourceServer with OKX Facilitator on startup
 resourceServer.initialize().then(() => {
   console.log('[x402-okx-sdk] ResourceServer successfully initialized with OKX Facilitator Service.');
 }).catch((err) => {
   console.warn('[x402-okx-sdk] ResourceServer initialization warning:', err.message || err);
+  seedSupportedMaps();
 });
 
 // Protected routes configuration matching OKX x402 v2 spec
@@ -136,7 +171,7 @@ const routesConfig: Record<string, any> = {
 };
 
 // Create payment middleware instance directly from official OKX SDK
-const sdkMiddleware = paymentMiddleware(routesConfig as any, resourceServer);
+const sdkMiddleware = paymentMiddleware(routesConfig as any, resourceServer, undefined, undefined, false);
 
 export async function x402OkxMiddleware(req: Request, res: Response, next: NextFunction) {
   if (process.env.BYPASS_PAYMENT_VERIFICATION === 'true') {
