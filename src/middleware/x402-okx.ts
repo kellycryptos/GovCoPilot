@@ -174,6 +174,13 @@ const routesConfig: Record<string, any> = {
 const sdkMiddleware = paymentMiddleware(routesConfig as any, resourceServer, undefined, undefined, false);
 
 export async function x402OkxMiddleware(req: Request, res: Response, next: NextFunction) {
+  // Normalize incoming host headers to the registered public domain (govcopilot-api.synarcdao.xyz)
+  // so SDK ExpressAdapter.getUrl() matches the registered resource URL when proxied via Cloudflare Workers
+  const publicHost = process.env.PUBLIC_DOMAIN || 'govcopilot-api.synarcdao.xyz';
+  req.headers.host = publicHost;
+  req.headers['x-forwarded-host'] = publicHost;
+  req.headers['x-forwarded-proto'] = 'https';
+
   // Guarantee payment-required header resource.url matches public ASP domain
   const origSetHeader = res.setHeader.bind(res);
   res.setHeader = function(name: string, value: any) {
