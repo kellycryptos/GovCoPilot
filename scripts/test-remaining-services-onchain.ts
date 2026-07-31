@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import fs from 'fs';
 import path from 'path';
 
-const WORKER_URL = 'https://gov-copilot-api.futuristic-talos-42b.workers.dev/api/analyze_governance_proposal';
+const WORKER_URL = 'https://govcopilot-api.synarcdao.xyz/api/analyze_governance_proposal';
 const PROVIDER_AGENT_ID = '5965';
 
 const REMAINING_SERVICES = [
@@ -19,8 +19,8 @@ const REMAINING_SERVICES = [
   {
     id: 3,
     name: 'Governance Risk Assessment',
-    feeUsdt: 0.03,
-    minimalUnits: '30000',
+    feeUsdt: 0.05,
+    minimalUnits: '50000',
     title: 'Risk Assessment Agent 9576',
     summary: 'Governance Risk Assessment Test',
     description: 'Requesting security risk modeling and liquidity impact assessment for Protocol Parameter Change #302.',
@@ -28,8 +28,8 @@ const REMAINING_SERVICES = [
   {
     id: 4,
     name: 'Execution Calldata Generator',
-    feeUsdt: 0.04,
-    minimalUnits: '40000',
+    feeUsdt: 0.05,
+    minimalUnits: '50000',
     title: 'Calldata Gen Agent 9576',
     summary: 'Execution Calldata Generator Test',
     description: 'Requesting EVM-compatible execution calldata for Grant Disbursement Proposal #403 on X Layer.',
