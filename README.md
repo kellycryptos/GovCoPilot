@@ -34,9 +34,9 @@ GovCoPilot exposes 4 specialized AI Agent services registered on the OKX Agent M
 | Service Name | Price (USDT0) | Required Input | Description |
 |---|---|---|---|
 | 🔍 **DAO Proposal Analysis** | `0.05 USDT` | `proposalText` | Full multi-dimensional DAO proposal analysis returning strategy, security assessment, confidence score, and EVM calldata. |
-| 🗳️ **DAO Voting Strategy** | `0.02 USDT` | `proposalTitle`, `proposalText`, `chain` | Fast confidence-scored voting strategy recommendations (YES/NO/ABSTAIN) for DAO proposals on X Layer. |
-| 🛡️ **Governance Risk Assessment** | `0.03 USDT` | `proposalTitle`, `proposalText` | Deep security, treasury impact, and smart contract vulnerability risk modeling for governance proposals. |
-| ⚙️ **Execution Calldata Generator** | `0.04 USDT` | `proposalTitle`, `proposalText`, `executionContext` | Generates EVM-compatible execution calldata and transaction parameters for approved DAO proposals. |
+| 🗳️ **DAO Voting Strategy** | `0.05 USDT` | `proposalTitle`, `proposalText`, `chain` | Fast confidence-scored voting strategy recommendations (YES/NO/ABSTAIN) for DAO proposals on X Layer. |
+| 🛡️ **Governance Risk Assessment** | `0.05 USDT` | `proposalTitle`, `proposalText` | Deep security, treasury impact, and smart contract vulnerability risk modeling for governance proposals. |
+| ⚙️ **Execution Calldata Generator** | `0.05 USDT` | `proposalTitle`, `proposalText`, `executionContext` | Generates EVM-compatible execution calldata and transaction parameters for approved DAO proposals. |
 
 ---
 
