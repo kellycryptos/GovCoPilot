@@ -174,6 +174,10 @@ const routesConfig: Record<string, any> = {
 const sdkMiddleware = paymentMiddleware(routesConfig as any, resourceServer, undefined, undefined, false);
 
 export async function x402OkxMiddleware(req: Request, res: Response, next: NextFunction) {
+  if (req.headers['x-forwarded-host']) {
+    req.headers.host = (req.headers['x-forwarded-host'] as string).split(',')[0].trim();
+  }
+
   if (process.env.BYPASS_PAYMENT_VERIFICATION === 'true') {
     console.log(`[okx-x402-sdk] Dev bypass active for ${req.method} ${req.path}`);
     return next();
